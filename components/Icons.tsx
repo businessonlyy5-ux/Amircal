@@ -1,0 +1,7 @@
+const base = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, viewBox: '0 0 24 24', 'aria-hidden': true } as const;
+export const BoxIcon = ({ className = 'h-10 w-10' }: { className?: string }) => (<svg {...base} strokeWidth={1.5} className={className}><path d='M3 7l9-4 9 4v10l-9 4-9-4z' /><path d='M3 7l9 4 9-4M12 11v10' /></svg>);
+export const HeartIcon = ({ filled = false, className = 'h-5 w-5' }: { filled?: boolean; className?: string }) => (<svg {...base} className={className} fill={filled ? 'currentColor' : 'none'}><path d='M12 21s-8-5.2-8-11a4.5 4.5 0 018-2.7A4.5 4.5 0 0120 10c0 5.8-8 11-8 11z' /></svg>);
+export const CartIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (<svg {...base} className={className}><path d='M3 4h3l2.5 11h10L21 7H7' /><circle cx='9.5' cy='19.5' r='1.3' /><circle cx='17.5' cy='19.5' r='1.3' /></svg>);
+export const HomeIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (<svg {...base} className={className}><path d='M3 11l9-8 9 8M5 10v10h14V10' /></svg>);
+export const GridIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (<svg {...base} className={className}><rect x='4' y='4' width='6' height='6' /><rect x='14' y='4' width='6' height='6' /><rect x='4' y='14' width='6' height='6' /><rect x='14' y='14' width='6' height='6' /></svg>);
+export const SearchIcon = ({ className = 'h-5 w-5' }: { className?: string }) => (<svg {...base} className={className}><circle cx='11' cy='11' r='7' /><path d='M16 16l5 5' /></svg>);
