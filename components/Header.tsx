@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { CATEGORIES, PRODUCTS } from '@/lib/data';
 import { useStore } from './Store';
 import { CartIcon, HeartIcon } from './Icons';
+import Logo from './Logo';
 
 export default function Header() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function Header() {
   return (
     <header className='sticky top-0 z-30 bg-ink text-paper'>
       <div className='mx-auto flex max-w-7xl items-center gap-3 px-4 py-3'>
-        <Link href='/' className='text-xl font-extrabold tracking-[.14em]'>AMIRCAL</Link>
+        <Logo />
         <div className='hidden text-xs leading-tight lg:block'>Livrer à<b className='block text-[13px]'>{currency === 'USD' ? 'États-Unis' : 'Haïti'}</b></div>
         <form onSubmit={go} role='search' className='relative min-w-0 flex-1'>
           <input value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onBlur={() => setTimeout(() => setOpen(false), 150)} aria-label='Rechercher' placeholder='Que recherchez-vous ?' autoComplete='off' className='w-full rounded px-3.5 py-3 text-ink' />
