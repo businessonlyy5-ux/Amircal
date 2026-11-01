@@ -2,8 +2,8 @@ services:
   - type: web
     name: amircal
     runtime: node
-    plan: starter
-    buildCommand: npm ci && npm run build
+    plan: free
+    buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /
     envVars:
@@ -12,7 +12,7 @@ services:
       - key: NEXT_PUBLIC_SUPABASE_URL
         value: https://uzzuxqhoouyfhpqjtpht.supabase.co
       - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-        sync: false
+        value: sb_publishable_UCoc-v9Hy7NgXrFAmVviYQ_gNrSyZl6
       - key: NEXT_PUBLIC_SITE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
