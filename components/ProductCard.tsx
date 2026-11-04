@@ -9,8 +9,13 @@ export default function ProductCard({ p }: { p: Product }) {
   const liked = wish.includes(p.id);
   return (
     <article className='relative flex h-full flex-col rounded border border-neutral-200 bg-paper shadow-sm'>
-      <Link href={'/products/' + p.id} aria-label={p.name} className='relative grid aspect-square place-items-center bg-soft text-neutral-400'>
-        <BoxIcon className='h-1/3 w-1/3' />
+      <Link href={'/products/' + p.id} aria-label={p.name} className='relative grid aspect-square place-items-center overflow-hidden bg-soft text-neutral-400'>
+        {p.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={p.image} alt={p.name} loading='lazy' className='h-full w-full object-contain' />
+        ) : (
+          <BoxIcon className='h-1/3 w-1/3' />
+        )}
         {p.discount > 0 && <span className='absolute left-2 top-2 rounded-sm bg-ink px-1.5 py-0.5 text-[11px] font-bold text-paper'>-{p.discount}%</span>}
       </Link>
       <button onClick={() => toggleWish(p.id)} aria-pressed={liked} aria-label='Favoris' className='absolute right-1.5 top-1.5 grid h-8 w-8 place-items-center rounded-full border border-neutral-200 bg-paper'><HeartIcon filled={liked} className='h-4 w-4' /></button>
