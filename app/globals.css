@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+:root { --gold: #C9A24B; --gold-deep: #A8832F; }
 html { color-scheme: light; }
 body { background: #fff; color: #000; font-family: 'Helvetica Neue', Arial, sans-serif; }
-:focus-visible { outline: 2px solid #000; outline-offset: 2px; }
+::selection { background: var(--gold); color: #000; }
+:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 2px; }
+
+/* ---- Accent doré ---- */
+header { border-bottom: 2px solid var(--gold); }
+footer { border-top: 3px solid var(--gold); }
+
+/* Boutons et liens noirs : passent en doré au survol */
+button.bg-ink:hover:not(:disabled),
+a.bg-ink:hover { background-color: var(--gold); border-color: var(--gold); color: #000; }
+button.border-ink:hover:not(:disabled):not(.bg-ink) { border-color: var(--gold-deep); }
+
+/* Pastilles (remises, compteurs) en doré */
+.absolute.bg-ink { background-color: var(--gold); color: #000; }
+.bg-ink.rounded-sm.px-2 { background-color: var(--gold); color: #000; }
+
+/* Barre de progression livraison offerte */
+.h-full.bg-ink { background-color: var(--gold); }
+
+/* Petit filet doré sous les titres de section */
+main h2.text-xl::after { content: ''; display: block; width: 36px; height: 3px; margin-top: 6px; background: var(--gold); }
+
+/* Cercles de catégories */
+a:hover > span.rounded-full { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
+
+/* Carte produit : liseré doré au survol */
+article.rounded:hover { border-color: var(--gold); }
