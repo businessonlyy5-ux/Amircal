@@ -42,7 +42,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [currency, cart, wish, ready]);
 
   const say = useCallback((m: string) => { setToast(m); setTimeout(() => setToast(''), 1600); }, []);
-  const add = useCallback((id: number, qty = 1, variant = 'Noir / M') => {
+  const add = useCallback((id: number, qty = 1, variant = 'Standard') => {
     setCart((c) => {
       const f = c.find((l) => l.id === id && l.variant === variant);
       return f ? c.map((l) => (l === f ? { ...l, qty: Math.min(l.qty + qty, 10) } : l)) : [...c, { id, qty, variant }];
