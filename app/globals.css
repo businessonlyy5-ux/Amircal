@@ -32,3 +32,9 @@ a:hover > span.rounded-full { border-color: var(--gold); box-shadow: 0 0 0 2px v
 
 /* Carte produit : liseré doré au survol */
 article.rounded:hover { border-color: var(--gold); }
+
+/* ---- Mobile : la barre d’achat rapide de la fiche produit se pose au-dessus de la navigation du bas ---- */
+@media (max-width: 767px) {
+  .fixed.bottom-14 { bottom: calc(3.6rem + env(safe-area-inset-bottom, 0px)); padding-bottom: 0.5rem; box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08); }
+  main.pb-24 { padding-bottom: calc(10rem + env(safe-area-inset-bottom, 0px)); }
+}

@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { CATEGORIES, PRODUCTS } from '@/lib/data';
 import { useStore } from './Store';
@@ -9,6 +9,8 @@ import Logo from './Logo';
 
 export default function Header() {
   const router = useRouter();
+  const pathname = usePathname();
+  const onProductPage = /^\/products\/[^/]+/.test(pathname ?? ''); // la barre de catégories est masquée sur les fiches produit
   const { currency, setCurrency, count, wish } = useStore();
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -34,12 +36,14 @@ export default function Header() {
         <Link href='/wishlist' aria-label='Favoris' className='relative hidden p-2 md:block'><HeartIcon className='h-6 w-6' />{wish.length > 0 && <span className='absolute right-0 top-0 min-w-4 rounded-full bg-paper px-1 text-[10px] font-bold text-ink'>{wish.length}</span>}</Link>
         <Link href='/cart' aria-label='Panier' className='relative hidden p-2 md:block'><CartIcon className='h-6 w-6' />{count > 0 && <span className='absolute right-0 top-0 min-w-4 rounded-full bg-paper px-1 text-[10px] font-bold text-ink'>{count}</span>}</Link>
       </div>
-      <nav aria-label='Catégories' className='overflow-x-auto whitespace-nowrap border-t border-neutral-700'>
-        <div className='mx-auto flex max-w-7xl'>
-          <Link href='/products' className='px-3.5 py-2.5 text-[13.5px] font-bold hover:bg-graphite'>Toutes les catégories</Link>
-          {CATEGORIES.map((c) => (<Link key={c} href={'/products?cat=' + encodeURIComponent(c)} className='px-3.5 py-2.5 text-[13.5px] hover:bg-graphite'>{c}</Link>))}
-        </div>
-      </nav>
+      {!onProductPage && (
+        <nav aria-label='Catégories' className='overflow-x-auto whitespace-nowrap border-t border-neutral-700'>
+          <div className='mx-auto flex max-w-7xl'>
+            <Link href='/products' className='px-3.5 py-2.5 text-[13.5px] font-bold hover:bg-graphite'>Toutes les catégories</Link>
+            {CATEGORIES.map((c) => (<Link key={c} href={'/products?cat=' + encodeURIComponent(c)} className='px-3.5 py-2.5 text-[13.5px] hover:bg-graphite'>{c}</Link>))}
+          </div>
+        </nav>
+      )}
     </header>
   );
 }
