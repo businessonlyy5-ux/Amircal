@@ -1,6 +1,6 @@
 export type Lang = 'fr' | 'en';
 
-// Textes de l’interface commune (en-tête, navigation, pied de page). Les noms de produits viennent du fournisseur et ne sont pas traduits.
+// Textes de l’interface commune (en-tête, navigation, pied de page, bannières). Les noms de produits viennent du fournisseur et ne sont pas traduits.
 const D: Record<string, { fr: string; en: string }> = {
   'ann.free': { fr: 'Livraison offerte dès', en: 'Free shipping from' },
   'ann.track': { fr: 'Suivi de colis inclus', en: 'Tracking included' },
@@ -29,20 +29,13 @@ const D: Record<string, { fr: string; en: string }> = {
   'ft.secure': { fr: 'Paiement sécurisé', en: 'Secure payment' },
   'ft.lang': { fr: 'Langue', en: 'Language' },
   'ft.rights': { fr: 'Tous droits réservés.', en: 'All rights reserved.' },
-  // Noms de catégories (la valeur française reste la clé de filtrage dans les URL)
-  'Électronique': { fr: 'Électronique', en: 'Electronics' },
-  'Maison & Cuisine': { fr: 'Maison & Cuisine', en: 'Home & Kitchen' },
-  'Mode homme': { fr: 'Mode homme', en: 'Men’s Fashion' },
-  'Mode femme': { fr: 'Mode femme', en: 'Women’s Fashion' },
-  'Enfants & Bébé': { fr: 'Enfants & Bébé', en: 'Kids & Baby' },
-  'Beauté & Soins': { fr: 'Beauté & Soins', en: 'Beauty & Personal Care' },
-  'Auto': { fr: 'Auto', en: 'Automotive' },
-  'Sports & Plein air': { fr: 'Sports & Plein air', en: 'Sports & Outdoors' },
-  'Jouets & Jeux': { fr: 'Jouets & Jeux', en: 'Toys & Games' },
-  'Animaux': { fr: 'Animaux', en: 'Pet Supplies' },
-  'Voyage': { fr: 'Voyage', en: 'Travel' },
-  'Bureau': { fr: 'Bureau', en: 'Office Supplies' },
-  'Bricolage': { fr: 'Bricolage', en: 'Tools & DIY' },
+  'hero.desc': { fr: 'Découvrez toute la sélection.', en: 'Discover the full selection.' },
+  'hero.cta': { fr: 'Acheter maintenant', en: 'Shop now' },
+  'hero.ship.title': { fr: 'Livraison États-Unis et Haïti', en: 'Delivery to the US and Haiti' },
+  'hero.ship.desc': { fr: 'Prix en USD et en HTG, suivi de colis inclus.', en: 'Prices in USD and HTG, tracking included.' },
+  'hero.ship.cta': { fr: 'Tout le catalogue', en: 'Browse everything' },
+  'hero.prev': { fr: 'Précédent', en: 'Previous' },
+  'hero.next': { fr: 'Suivant', en: 'Next' },
 };
 
 export const tr = (lang: Lang, key: string) => D[key]?.[lang] ?? key;

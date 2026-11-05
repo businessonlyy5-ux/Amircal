@@ -1,10 +1,10 @@
 import Link from 'next/link';
-import HeroCarousel from '@/components/HeroCarousel';
+import HeroCarousel, { type Slide } from '@/components/HeroCarousel';
 import ProductRow from '@/components/ProductRow';
 import ProductCard from '@/components/ProductCard';
 import CatName from '@/components/CatName';
 import { BoxIcon } from '@/components/Icons';
-import { getCategories } from '@/lib/categories';
+import { getCategories, type Cat } from '@/lib/categories';
 import { listProducts } from '@/lib/products';
 
 export const revalidate = 300;
@@ -12,19 +12,30 @@ export const revalidate = 300;
 export default async function Home() {
   const cats = await getCategories();
   const rowCats = cats.slice(0, 6);
-  const [latest, grid, ...rows] = await Promise.all([
+  const heroCats: Cat[] = ['maison-cuisine', 'electronique', 'beaute-soins'].flatMap((s) => cats.filter((c) => c.slug === s));
+  const heroPick = heroCats.length ? heroCats : cats.slice(0, 3);
+  const [latest, grid, heroLists, ...rows] = await Promise.all([
     listProducts({ per: 12 }),
     listProducts({ per: 10, page: 2 }),
+    Promise.all(heroPick.map((c) => listProducts({ cat: c.slug, per: 3 }))),
     ...rowCats.map((c) => listProducts({ cat: c.slug, per: 8 })),
   ]);
+  const imgs = (items: { image?: string }[]) => items.map((p) => p.image).filter((u): u is string => !!u);
+  const slides: Slide[] = [
+    ...heroPick.map((c, i) => ({ cat: c, images: imgs(heroLists[i].items) })),
+    { images: imgs(latest.items).slice(0, 3) },
+  ];
   return (
     <main>
-      <HeroCarousel />
+      <HeroCarousel slides={slides} />
       <section className='mx-auto max-w-7xl px-4 py-6'>
         <div className='flex gap-4 overflow-x-auto pb-2'>
           {cats.map((c) => (
             <Link key={c.slug} href={'/products?cat=' + c.slug} className='w-20 flex-none text-center text-xs font-medium md:w-28 md:text-[13px]'>
-              <span className='mb-2 grid aspect-square place-items-center rounded-full border border-neutral-200 bg-soft text-neutral-500'><BoxIcon className='h-1/3 w-1/3' /></span><CatName c={c} />
+              <span className='mb-2 grid aspect-square place-items-center overflow-hidden rounded-full border border-neutral-200 bg-white text-neutral-500'>
+                {c.image ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={c.image} alt='' loading='lazy' className='h-full w-full object-cover' />) : <BoxIcon className='h-1/3 w-1/3' />}
+              </span>
+              <CatName c={c} />
             </Link>
           ))}
         </div>
