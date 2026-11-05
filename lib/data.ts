@@ -8,7 +8,7 @@ export type Product = { id: number; name: string; category: string; price: numbe
 
 export const MARGIN = 2.5;
 export const RATE_HTG = 131; // valeur provisoire, à lire depuis la table exchange_rates
-export const CATEGORIES = ['Électronique', 'Maison & Cuisine', 'Mode homme', 'Mode femme', 'Enfants & Bébé', 'Beauté & Soins', 'Auto', 'Sports & Plein air', 'Jouets & Jeux', 'Animaux', 'Bureau', 'Bricolage'];
+export const CATEGORIES = ['Électronique', 'Maison & Cuisine', 'Mode homme', 'Mode femme', 'Enfants & Bébé', 'Beauté & Soins', 'Auto', 'Sports & Plein air', 'Jouets & Jeux', 'Animaux', 'Voyage', 'Bureau', 'Bricolage'];
 const BASE = ['Écouteurs sans fil', 'Mixeur portable', 'Montre connectée', 'Sac à dos', 'Lampe LED', 'Tapis de yoga', 'Set de casseroles', 'Support téléphone', 'Jeu de construction', 'Sérum hydratant', 'Coussin de voyage', 'Boîte à outils', 'Brosse pour animaux', 'Chaussures de course', 'Bouteille isotherme', 'Organiseur de bureau'];
 
 const DEMO: Product[] = Array.from({ length: 48 }, (_, i) => {
