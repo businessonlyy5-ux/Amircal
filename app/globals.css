@@ -2,15 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { --gold: #C9A24B; --gold-deep: #A8832F; }
+/* Or : --gold sur fonds sombres, --gold-text (plus foncé) pour le texte sur fond blanc (contraste ≥ 5:1). */
+:root { --gold: #C9A24B; --gold-deep: #A8832F; --gold-text: #8A6B1E; }
 html { color-scheme: light; }
 body { background: #fff; color: #000; font-family: 'Helvetica Neue', Arial, sans-serif; }
 ::selection { background: var(--gold); color: #000; }
 :focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 2px; }
 
-/* ---- Accent doré ---- */
+/* ---- En-tête / pied de page ---- */
 header { border-bottom: 2px solid var(--gold); }
+header a:hover, header > div button:hover { color: var(--gold); }
+header nav a { transition: color .15s; }
+header nav a:hover { color: var(--gold); }
+header nav a:first-child { color: var(--gold); }
 footer { border-top: 3px solid var(--gold); }
+footer b { color: var(--gold); letter-spacing: .04em; }
+footer a:hover { color: var(--gold); }
+nav[aria-label='Navigation mobile'] { border-top: 2px solid var(--gold); }
+
+/* ---- Liens dorés (texte foncé sur fond blanc) ---- */
+main a.underline { color: var(--gold-text); text-decoration-color: var(--gold); text-underline-offset: 3px; font-weight: 500; }
+main a.underline:hover { color: #000; }
+main button.underline { color: var(--gold-text); text-decoration-color: var(--gold); text-underline-offset: 3px; }
+main details summary:hover { color: var(--gold-text); }
+main details[open] summary span { color: var(--gold-text); }
+
+/* Étoiles, favoris, notes */
+span[aria-label$='sur 5'] { color: var(--gold-deep); }
+article div.text-xs.text-graphite { color: var(--gold-text); font-weight: 600; }
+button[aria-pressed='true'] svg { color: var(--gold-deep); }
 
 /* Boutons et liens noirs : passent en doré au survol */
 button.bg-ink:hover:not(:disabled),
@@ -24,17 +44,29 @@ button.border-ink:hover:not(:disabled):not(.bg-ink) { border-color: var(--gold-d
 /* Barre de progression livraison offerte */
 .h-full.bg-ink { background-color: var(--gold); }
 
-/* Petit filet doré sous les titres de section */
+/* Filet doré sous les titres de section */
 main h2.text-xl::after { content: ''; display: block; width: 36px; height: 3px; margin-top: 6px; background: var(--gold); }
 
-/* Cercles de catégories */
-a:hover > span.rounded-full { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
+/* Encadrés importants (récapitulatif, lot, barre livraison) */
+aside.border-ink, section.border-ink, div.border-ink.bg-soft { border-color: var(--gold); }
+aside.border-ink, section.border-ink { box-shadow: 0 2px 14px rgba(168, 131, 47, 0.12); }
 
-/* Carte produit : liseré doré au survol */
+/* Carrousel et pagination : élément actif doré */
+button.rounded-full[aria-current='true'] { background: var(--gold); border-color: var(--gold); }
+nav[aria-label='Pagination'] button[aria-current='true'] { background: var(--gold); border-color: var(--gold); color: #000; font-weight: 700; }
+
+/* Champs de formulaire */
+input:focus, select:focus { border-color: var(--gold-deep); box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.3); outline: none; }
+
+/* Cercles de catégories et cartes produit */
+a:hover > span.rounded-full { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
 article.rounded:hover { border-color: var(--gold); }
 
-/* ---- Mobile : la barre d’achat rapide de la fiche produit se pose au-dessus de la navigation du bas ---- */
+/* Notification */
+div[role='status'].bg-ink { border: 1px solid var(--gold); }
+
+/* ---- Mobile : barre d’achat / de commande au-dessus de la navigation du bas ---- */
 @media (max-width: 767px) {
-  .fixed.bottom-14 { bottom: calc(3.6rem + env(safe-area-inset-bottom, 0px)); padding-bottom: 0.5rem; box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08); }
+  .fixed.bottom-14 { bottom: calc(3.6rem + env(safe-area-inset-bottom, 0px)); padding-bottom: 0.5rem; border-top: 2px solid var(--gold); box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08); }
   main.pb-24 { padding-bottom: calc(10rem + env(safe-area-inset-bottom, 0px)); }
 }
