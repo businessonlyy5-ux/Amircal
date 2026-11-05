@@ -1,0 +1,39 @@
+name: Import Zendrop
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Test sans écriture : compte seulement les produits US disponibles (true/false)"
+        default: "true"
+      max_per_category:
+        description: "Nouveaux produits maximum par catégorie"
+        default: "200"
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Import
+        run: node scripts/import-zendrop.mjs
+        env:
+          ZENDROP_API_KEY: ${{ secrets.ZENDROP_API_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: https://uzzuxqhoouyfhpqjtpht.supabase.co
+          MAX_PER_CATEGORY: ${{ inputs.max_per_category }}
+          DRY_RUN: ${{ inputs.dry_run }}
+      - name: Enregistrer le catalogue (déclenche le déploiement Render)
+        if: ${{ inputs.dry_run != 'true' }}
+        run: |
+          git config user.name "amircal-bot"
+          git config user.email "amircal-bot@users.noreply.github.com"
+          git add lib/catalog.json
+          git diff --cached --quiet || (git commit -m "Catalogue : import Zendrop (entrepôts US)" && git push)
