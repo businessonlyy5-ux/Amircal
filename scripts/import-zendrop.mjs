@@ -9,6 +9,8 @@
 //
 // Le nettoyage des fiches (HTML, CSS parasite, entités, longueur) est fait ici.
 // Prix : base_price_usd = cost_usd = prix Zendrop ; la marge est appliquée par le site (lib/data.ts).
+// Relançable sans risque : les produits déjà présents dans Supabase sont ignorés, et un produit refusé
+// par la base est signalé puis sauté (il ne bloque plus tout l'import).
 import { readFile, writeFile, appendFile } from 'node:fs/promises';
 import { NICHES } from './niches.mjs';
 
@@ -79,6 +81,7 @@ export function cleanText(html = '') {
     let prev;
     do { prev = s; s = s.replace(/[^{}]*\{[^{}]*\}/g, ' '); } while (s !== prev);
   }
+  s = s.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\ud800-\udfff]/g, ''); // caractères que Postgres refuse
   return s.replace(/[ \t\u00a0]+/g, ' ').replace(/\s*\n\s*/g, '\n').replace(/\n{2,}/g, '\n').trim();
 }
 function cut(s, n) {
@@ -147,22 +150,34 @@ async function sb(path, opts = {}) {
 async function existingSupplierIds() {
   const ids = new Set();
   for (let off = 0; ; off += 1000) {
-    const rows = await sb(`products?select=supplier_product_id&supplier=eq.zendrop&limit=1000&offset=${off}`);
+    const rows = await sb(`products?select=supplier_product_id&supplier=eq.zendrop&order=id&limit=1000&offset=${off}`);
     rows.forEach((r) => r.supplier_product_id && ids.add(String(r.supplier_product_id)));
     if (rows.length < 1000) return ids;
   }
 }
+// Les doublons (même fournisseur + même id produit) sont ignorés par la base ; seuls les produits réellement ajoutés sont renvoyés.
+const insertProducts = (rows) => sb('products?on_conflict=supplier,supplier_product_id', { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=representation' }, body: JSON.stringify(rows) });
+
 async function saveToSupabase(site, items, categoryId, already) {
   const fresh = items.filter((i) => !already.has(String(i.id)));
+  let saved = 0;
   for (let i = 0; i < fresh.length; i += 100) {
     const chunk = fresh.slice(i, i + 100);
     const rows = chunk.map((p) => ({ category_id: categoryId, slug: `${slugify(p.name)}-${p.id}`, title: p.name, description: p.description, supplier: 'zendrop', supplier_product_id: String(p.id), base_price_usd: p.cost, cost_usd: p.cost, is_active: true, review_count: 0 }));
-    const inserted = await sb('products', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(rows) });
+    let inserted;
+    try { inserted = await insertProducts(rows); } catch (e) {
+      console.warn(`  ! ${site} : lot refusé (${e.message}) -> essai produit par produit`);
+      inserted = [];
+      for (const r of rows) {
+        try { inserted.push(...(await insertProducts([r]))); } catch (e2) { console.warn(`    produit ignoré ${r.supplier_product_id} (${r.title.slice(0, 40)}) : ${e2.message}`); }
+      }
+    }
     const byId = new Map(inserted.map((r) => [r.supplier_product_id, r.id]));
     const imgs = chunk.flatMap((p) => p.images.map((url, n) => ({ product_id: byId.get(String(p.id)), url, sort_order: n }))).filter((r) => r.product_id);
-    if (imgs.length) await sb('product_images', { method: 'POST', body: JSON.stringify(imgs) });
+    if (imgs.length) { try { await sb('product_images', { method: 'POST', body: JSON.stringify(imgs) }); } catch (e) { console.warn(`  ! ${site} : images non enregistrées (${e.message})`); } }
+    saved += inserted.length;
   }
-  return fresh.length;
+  return saved;
 }
 
 // ---------- Programme principal ----------
@@ -187,16 +202,16 @@ for (const [site, queries] of Object.entries(NICHES)) {
   let saved = 0;
   if (!DRY && items.length) {
     if (!categoryIds[site]) throw new Error(`Catégorie introuvable dans Supabase : ${site}`);
-    saved = await saveToSupabase(site, items, categoryIds[site], already);
+    try { saved = await saveToSupabase(site, items, categoryIds[site], already); } catch (e) { console.warn(`  ! ${site} : enregistrement Supabase interrompu : ${e.message}`); }
   }
   items.forEach((p) => added.push({ id: p.id, name: p.name, category: site, cost: p.cost, stock: STOCK_PLACEHOLDER, image: p.image }));
   summary.push({ categorie: site, deja_au_catalogue: have, nouveaux_US: items.length, total: have + items.length, objectif_100: have + items.length >= 100 ? 'OK' : 'INSUFFISANT', ajoutes_supabase: saved });
-  console.log(`${site} : +${items.length} (total ${have + items.length})`);
+  console.log(`${site} : +${items.length} (total ${have + items.length}), ajoutés en base : ${saved}`);
 }
 
 console.table(summary);
 if (process.env.GITHUB_STEP_SUMMARY) {
-  const md = ['| Catégorie | Déjà | Nouveaux (US) | Total | ≥ 100 |', '|---|---|---|---|---|', ...summary.map((s) => `| ${s.categorie} | ${s.deja_au_catalogue} | ${s.nouveaux_US} | ${s.total} | ${s.objectif_100} |`)].join('\n');
+  const md = ['| Catégorie | Déjà | Nouveaux (US) | Total | ≥ 100 | En base |', '|---|---|---|---|---|---|', ...summary.map((s) => `| ${s.categorie} | ${s.deja_au_catalogue} | ${s.nouveaux_US} | ${s.total} | ${s.objectif_100} | ${s.ajoutes_supabase} |`)].join('\n');
   await appendFile(process.env.GITHUB_STEP_SUMMARY, md + '\n');
 }
 
