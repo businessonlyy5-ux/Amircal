@@ -1,10 +1,12 @@
-// Catalogue réel : lib/catalog.json (produits Zendrop importés dans Supabase, prix = prix Zendrop x 2,5).
-// S'il est vide, les produits de démonstration ci-dessous sont utilisés.
+// Catalogue réel : lib/catalog.json (produits Zendrop importés dans Supabase, "cost" = prix Zendrop).
+// Le prix affiché = cost x MARGIN. MARGIN est provisoire : à ajuster une fois l'import terminé.
+// S'il n'y a aucun produit réel, les produits de démonstration ci-dessous sont utilisés.
 import catalog from './catalog.json';
 
 export type Currency = 'USD' | 'HTG';
 export type Product = { id: number; name: string; category: string; price: number; compareAt: number; discount: number; rating: number; stock: number; image?: string };
 
+export const MARGIN = 2.5;
 export const RATE_HTG = 131; // valeur provisoire, à lire depuis la table exchange_rates
 export const CATEGORIES = ['Électronique', 'Maison & Cuisine', 'Mode homme', 'Mode femme', 'Enfants & Bébé', 'Beauté & Soins', 'Auto', 'Sports & Plein air', 'Jouets & Jeux', 'Animaux', 'Bureau', 'Bricolage'];
 const BASE = ['Écouteurs sans fil', 'Mixeur portable', 'Montre connectée', 'Sac à dos', 'Lampe LED', 'Tapis de yoga', 'Set de casseroles', 'Support téléphone', 'Jeu de construction', 'Sérum hydratant', 'Coussin de voyage', 'Boîte à outils', 'Brosse pour animaux', 'Chaussures de course', 'Bouteille isotherme', 'Organiseur de bureau'];
@@ -24,7 +26,7 @@ const DEMO: Product[] = Array.from({ length: 48 }, (_, i) => {
   };
 });
 
-const REAL: Product[] = catalog.map((c) => ({ compareAt: 0, discount: 0, rating: 0, ...c }));
+const REAL: Product[] = catalog.map(({ cost, ...c }) => ({ compareAt: 0, discount: 0, rating: 0, ...c, price: Math.round(cost * MARGIN * 100) / 100 }));
 
 export const PRODUCTS: Product[] = REAL.length ? REAL : DEMO;
 
