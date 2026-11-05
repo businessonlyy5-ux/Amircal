@@ -7,9 +7,11 @@ import { useStore } from './Store';
 import CatName from './CatName';
 import { BoxIcon } from './Icons';
 
-export type Slide = { cat?: Cat; images: string[] };
+export type Banner = { desktop: string; mobile?: string; href: string; alt: string };
+export type Slide = { cat?: Cat; images: string[]; banner?: Banner };
 
-// Visuels : vrais produits du catalogue (aucune image générée ni de banque d’images externe).
+// Si des bannières sont déposées dans public/hero/, elles s’affichent en pleine largeur.
+// Sinon : repli sur des visuels de produits du catalogue.
 export default function HeroCarousel({ slides }: { slides: Slide[] }) {
   const { lang } = useStore();
   const [i, setI] = useState(0);
@@ -22,12 +24,23 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
   }, [paused, n]);
   if (n === 0) return null;
   const go = (k: number) => setI((k + n) % n);
-  const dark = i % 2 === 1;
+  const dark = !!slides[i].banner || i % 2 === 1;
+  const keyOf = (s: Slide) => s.banner?.desktop ?? s.cat?.slug ?? 'ship';
   return (
     <section aria-roledescription='carousel' aria-label='Promotions' onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} className='relative overflow-hidden'>
       <div className='flex transition-transform duration-500 motion-reduce:transition-none' style={{ transform: 'translateX(-' + i * 100 + '%)' }}>
-        {slides.map((s, k) => (
-          <div key={s.cat?.slug ?? 'ship'} aria-hidden={k !== i} className={'grid min-h-[250px] w-full flex-none grid-cols-[1.15fr_1fr] md:min-h-[360px] md:grid-cols-2 ' + (k % 2 ? 'bg-ink text-paper' : 'bg-soft text-ink')}>
+        {slides.map((s, k) => s.banner ? (
+          <div key={keyOf(s)} aria-hidden={k !== i} className='w-full flex-none'>
+            <Link href={s.banner.href} tabIndex={k === i ? 0 : -1} aria-label={s.banner.alt} className='block'>
+              <picture>
+                <source media='(min-width: 768px)' srcSet={s.banner.desktop} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={s.banner.mobile ?? s.banner.desktop} alt={s.banner.alt} loading={k === 0 ? 'eager' : 'lazy'} className='aspect-[3/2] w-full object-cover md:aspect-[3/1]' />
+              </picture>
+            </Link>
+          </div>
+        ) : (
+          <div key={keyOf(s)} aria-hidden={k !== i} className={'grid min-h-[250px] w-full flex-none grid-cols-[1.15fr_1fr] md:min-h-[360px] md:grid-cols-2 ' + (k % 2 ? 'bg-ink text-paper' : 'bg-soft text-ink')}>
             <div className='flex flex-col justify-center gap-2.5 py-8 pl-12 pr-2 pb-12 md:max-w-xl md:gap-3 md:pl-14 md:pr-6 md:pb-8'>
               <h2 className='text-2xl font-extrabold leading-tight tracking-tight md:text-5xl'>{s.cat ? <CatName c={s.cat} /> : tr(lang, 'hero.ship.title')}</h2>
               <p className='text-sm opacity-80 md:text-base'>{s.cat ? tr(lang, 'hero.desc') : tr(lang, 'hero.ship.desc')}</p>
@@ -45,13 +58,15 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
           </div>
         ))}
       </div>
-      <button onClick={() => go(i - 1)} aria-label={tr(lang, 'hero.prev')} className='absolute left-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full border border-ink bg-paper text-lg text-ink md:h-10 md:w-10 md:text-xl'>‹</button>
-      <button onClick={() => go(i + 1)} aria-label={tr(lang, 'hero.next')} className='absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full border border-ink bg-paper text-lg text-ink md:h-10 md:w-10 md:text-xl'>›</button>
-      <div className='absolute inset-x-0 bottom-3 flex justify-center gap-2'>
-        {slides.map((s, k) => (
-          <button key={s.cat?.slug ?? 'ship'} onClick={() => setI(k)} aria-label={'Slide ' + (k + 1)} aria-current={k === i} className={'h-1.5 w-7 rounded-full border ' + (dark ? 'border-paper ' : 'border-ink ') + (k === i ? (dark ? 'bg-paper' : 'bg-ink') : 'bg-transparent')} />
-        ))}
-      </div>
+      {n > 1 && (<>
+        <button onClick={() => go(i - 1)} aria-label={tr(lang, 'hero.prev')} className='absolute left-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full border border-ink bg-paper text-lg text-ink md:h-10 md:w-10 md:text-xl'>‹</button>
+        <button onClick={() => go(i + 1)} aria-label={tr(lang, 'hero.next')} className='absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 rounded-full border border-ink bg-paper text-lg text-ink md:h-10 md:w-10 md:text-xl'>›</button>
+        <div className='absolute inset-x-0 bottom-3 flex justify-center gap-2'>
+          {slides.map((s, k) => (
+            <button key={keyOf(s)} onClick={() => setI(k)} aria-label={'Slide ' + (k + 1)} aria-current={k === i} className={'h-1.5 w-7 rounded-full border shadow ' + (dark ? 'border-paper ' : 'border-ink ') + (k === i ? (dark ? 'bg-paper' : 'bg-ink') : 'bg-transparent')} />
+          ))}
+        </div>
+      </>)}
     </section>
   );
 }

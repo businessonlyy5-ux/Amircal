@@ -5,6 +5,7 @@ import ProductCard from '@/components/ProductCard';
 import CatName from '@/components/CatName';
 import { BoxIcon } from '@/components/Icons';
 import { getCategories, type Cat } from '@/lib/categories';
+import { heroSlides } from '@/lib/hero';
 import { listProducts } from '@/lib/products';
 
 export const revalidate = 300;
@@ -14,14 +15,15 @@ export default async function Home() {
   const rowCats = cats.slice(0, 6);
   const heroCats: Cat[] = ['maison-cuisine', 'electronique', 'beaute-soins'].flatMap((s) => cats.filter((c) => c.slug === s));
   const heroPick = heroCats.length ? heroCats : cats.slice(0, 3);
+  const custom = heroSlides(); // bannières déposées dans public/hero/
   const [latest, grid, heroLists, ...rows] = await Promise.all([
     listProducts({ per: 12 }),
     listProducts({ per: 10, page: 2 }),
-    Promise.all(heroPick.map((c) => listProducts({ cat: c.slug, per: 3 }))),
+    custom.length ? Promise.resolve([]) : Promise.all(heroPick.map((c) => listProducts({ cat: c.slug, per: 3 }))),
     ...rowCats.map((c) => listProducts({ cat: c.slug, per: 8 })),
   ]);
   const imgs = (items: { image?: string }[]) => items.map((p) => p.image).filter((u): u is string => !!u);
-  const slides: Slide[] = [
+  const slides: Slide[] = custom.length ? custom : [
     ...heroPick.map((c, i) => ({ cat: c, images: imgs(heroLists[i].items) })),
     { images: imgs(latest.items).slice(0, 3) },
   ];
