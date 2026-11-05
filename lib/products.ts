@@ -21,9 +21,14 @@ function toProduct(r: Row): Product {
 const valid = (p: Product) => Number.isFinite(p.id) && p.id > 0;
 const clean = (s: string) => s.replace(/[%_,()\\*]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60);
 
-async function categoryId(name: string) {
-  const { data } = await sbPublic().from('categories').select('id').eq('name', name).eq('is_active', true).limit(1);
-  return ((data ?? []) as { id: string }[])[0]?.id ?? null;
+// Une catégorie se désigne par son slug (ex. electronique) ; l’ancien format par nom reste accepté.
+async function categoryId(value: string) {
+  const db = sbPublic();
+  const bySlug = await db.from('categories').select('id').eq('slug', value).eq('is_active', true).limit(1);
+  const a = ((bySlug.data ?? []) as { id: string }[])[0]?.id;
+  if (a) return a;
+  const byName = await db.from('categories').select('id').eq('name', value).eq('is_active', true).limit(1);
+  return ((byName.data ?? []) as { id: string }[])[0]?.id ?? null;
 }
 
 export type ListOpts = { q?: string; cat?: string; min?: number; max?: number; sort?: string; page?: number; per?: number };

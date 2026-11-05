@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { CATEGORIES } from '@/lib/data';
+import { getCategories } from '@/lib/categories';
 import { listProducts } from '@/lib/products';
+import CatName from '@/components/CatName';
 import ProductCard from '@/components/ProductCard';
 
 export const metadata = { title: 'Catalogue', description: 'Tous les produits AMIRCAL : filtrez par catégorie et par prix.' };
@@ -10,8 +11,11 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 export default async function ProductsPage({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
+  const cats = await getCategories();
   const q = one(sp.q) ?? '';
-  const cat = one(sp.cat) ?? '';
+  const catParam = one(sp.cat) ?? '';
+  const current = cats.find((c) => c.slug === catParam || c.name === catParam); // le nom reste accepté (anciens liens)
+  const cat = current?.slug ?? catParam;
   const sort = one(sp.sort) ?? 'rel';
   const minS = one(sp.min) ?? '';
   const maxS = one(sp.max) ?? '';
@@ -32,7 +36,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: SP 
         <h2 className='mb-2 font-bold'>Catégories</h2>
         <ul className='space-y-1'>
           <li><Link href={href({ cat: '' })} className={!cat ? 'font-bold underline' : ''}>Toutes</Link></li>
-          {CATEGORIES.map((c) => (<li key={c}><Link href={href({ cat: c })} className={cat === c ? 'font-bold underline' : ''}>{c}</Link></li>))}
+          {cats.map((c) => (<li key={c.slug}><Link href={href({ cat: c.slug })} className={cat === c.slug ? 'font-bold underline' : ''}><CatName c={c} /></Link></li>))}
         </ul>
         {cat && <input type='hidden' name='cat' value={cat} />}
       </div>
@@ -58,7 +62,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: SP 
 
   return (
     <main className='mx-auto max-w-7xl px-4 py-4'>
-      <h1 className='mb-3 font-bold'>{res.total.toLocaleString('fr-FR')} produits{cat ? ' · ' + cat : ''}{q ? ' pour « ' + q + ' »' : ''}</h1>
+      <h1 className='mb-3 font-bold'>{res.total.toLocaleString('fr-FR')} produits{current ? ' · ' : ''}{current ? <CatName c={current} /> : null}{q ? ' pour « ' + q + ' »' : ''}</h1>
       <details className='mb-4 rounded border border-neutral-300 p-3 md:hidden'><summary className='cursor-pointer font-bold'>Filtres et tri</summary><div className='mt-3'>{filters}</div></details>
       <div className='md:grid md:grid-cols-[240px_1fr] md:gap-5'>
         <aside className='hidden self-start rounded border border-neutral-200 p-3.5 md:block'>{filters}</aside>

@@ -1,4 +1,4 @@
-// Types, constantes et formats communs. Les produits viennent de Supabase (lib/products.ts, côté serveur).
+// Types, constantes et formats communs. Produits et catégories viennent de Supabase (lib/products.ts, lib/categories.ts).
 export type Currency = 'USD' | 'HTG';
 export type Product = {
   id: number; // identifiant Zendrop (supplier_product_id)
@@ -9,7 +9,6 @@ export type Product = {
 
 export const MARGIN = 2.5; // provisoire : prix affiché = prix Zendrop x MARGIN
 export const RATE_HTG = 131; // valeur provisoire, à lire depuis la table exchange_rates
-export const CATEGORIES = ['Électronique', 'Maison & Cuisine', 'Mode homme', 'Mode femme', 'Enfants & Bébé', 'Beauté & Soins', 'Auto', 'Sports & Plein air', 'Jouets & Jeux', 'Animaux', 'Voyage', 'Bureau', 'Bricolage'];
 export const VARIANTS = { Couleur: ['Noir', 'Blanc', 'Gris'], Taille: ['S', 'M', 'L'] };
 
 export function formatMoney(usd: number, cur: Currency) {

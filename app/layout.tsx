@@ -5,7 +5,9 @@ import AnnouncementBar from '@/components/AnnouncementBar';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import MobileNav from '@/components/MobileNav';
+import { getCategories } from '@/lib/categories';
 
+export const revalidate = 300;
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
   title: { default: 'AMIRCAL — Marketplace', template: '%s | AMIRCAL' },
@@ -13,13 +15,14 @@ export const metadata: Metadata = {
 };
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const categories = await getCategories();
   return (
     <html lang='fr'>
       <body className='pb-16 md:pb-0'>
         <StoreProvider>
           <AnnouncementBar />
-          <Header />
+          <Header categories={categories} />
           {children}
           <Footer />
           <MobileNav />

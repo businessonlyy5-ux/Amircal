@@ -2,13 +2,14 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { CATEGORIES } from '@/lib/data';
+import type { Cat } from '@/lib/categories';
 import { tr } from '@/lib/i18n';
 import { useStore } from './Store';
 import { CartIcon, HeartIcon } from './Icons';
+import CatName from './CatName';
 import Logo from './Logo';
 
-export default function Header() {
+export default function Header({ categories }: { categories: Cat[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const onProductPage = /^\/products\/[^/]+/.test(pathname ?? ''); // barre de catégories masquée sur les fiches produit
@@ -56,7 +57,7 @@ export default function Header() {
         <nav aria-label={t('nav.cats')} className='overflow-x-auto whitespace-nowrap border-t border-neutral-700'>
           <div className='mx-auto flex max-w-7xl'>
             <Link href='/products' className='px-3.5 py-2.5 text-[13.5px] font-bold hover:bg-graphite'>{t('hdr.all')}</Link>
-            {CATEGORIES.map((c) => (<Link key={c} href={'/products?cat=' + encodeURIComponent(c)} className='px-3.5 py-2.5 text-[13.5px] hover:bg-graphite'>{t(c)}</Link>))}
+            {categories.map((c) => (<Link key={c.slug} href={'/products?cat=' + c.slug} className='px-3.5 py-2.5 text-[13.5px] hover:bg-graphite'><CatName c={c} /></Link>))}
           </div>
         </nav>
       )}
