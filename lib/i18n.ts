@@ -1,0 +1,48 @@
+export type Lang = 'fr' | 'en';
+
+// Textes de l’interface commune (en-tête, navigation, pied de page). Les noms de produits viennent du fournisseur et ne sont pas traduits.
+const D: Record<string, { fr: string; en: string }> = {
+  'ann.free': { fr: 'Livraison offerte dès', en: 'Free shipping from' },
+  'ann.track': { fr: 'Suivi de colis inclus', en: 'Tracking included' },
+  'nav.home': { fr: 'Accueil', en: 'Home' },
+  'nav.cats': { fr: 'Catégories', en: 'Categories' },
+  'nav.search': { fr: 'Recherche', en: 'Search' },
+  'nav.wish': { fr: 'Favoris', en: 'Wishlist' },
+  'nav.cart': { fr: 'Panier', en: 'Cart' },
+  'hdr.placeholder': { fr: 'Que recherchez-vous ?', en: 'What are you looking for?' },
+  'hdr.deliver': { fr: 'Livrer à', en: 'Deliver to' },
+  'hdr.us': { fr: 'États-Unis', en: 'United States' },
+  'hdr.ht': { fr: 'Haïti', en: 'Haiti' },
+  'hdr.account': { fr: 'Compte', en: 'Account' },
+  'hdr.all': { fr: 'Toutes les catégories', en: 'All categories' },
+  'hdr.results': { fr: 'Voir tous les résultats pour', en: 'See all results for' },
+  'ft.tag': { fr: 'Marketplace internationale.', en: 'International marketplace.' },
+  'ft.help': { fr: 'Aide', en: 'Help' },
+  'ft.track': { fr: 'Suivi de commande', en: 'Order tracking' },
+  'ft.ship': { fr: 'Livraison', en: 'Shipping' },
+  'ft.returns': { fr: 'Retours', en: 'Returns' },
+  'ft.account': { fr: 'Compte', en: 'Account' },
+  'ft.login': { fr: 'Connexion', en: 'Log in' },
+  'ft.wish': { fr: 'Favoris', en: 'Wishlist' },
+  'ft.cart': { fr: 'Panier', en: 'Cart' },
+  'ft.cur': { fr: 'Devises', en: 'Currencies' },
+  'ft.secure': { fr: 'Paiement sécurisé', en: 'Secure payment' },
+  'ft.lang': { fr: 'Langue', en: 'Language' },
+  'ft.rights': { fr: 'Tous droits réservés.', en: 'All rights reserved.' },
+  // Noms de catégories (la valeur française reste la clé de filtrage dans les URL)
+  'Électronique': { fr: 'Électronique', en: 'Electronics' },
+  'Maison & Cuisine': { fr: 'Maison & Cuisine', en: 'Home & Kitchen' },
+  'Mode homme': { fr: 'Mode homme', en: 'Men’s Fashion' },
+  'Mode femme': { fr: 'Mode femme', en: 'Women’s Fashion' },
+  'Enfants & Bébé': { fr: 'Enfants & Bébé', en: 'Kids & Baby' },
+  'Beauté & Soins': { fr: 'Beauté & Soins', en: 'Beauty & Personal Care' },
+  'Auto': { fr: 'Auto', en: 'Automotive' },
+  'Sports & Plein air': { fr: 'Sports & Plein air', en: 'Sports & Outdoors' },
+  'Jouets & Jeux': { fr: 'Jouets & Jeux', en: 'Toys & Games' },
+  'Animaux': { fr: 'Animaux', en: 'Pet Supplies' },
+  'Voyage': { fr: 'Voyage', en: 'Travel' },
+  'Bureau': { fr: 'Bureau', en: 'Office Supplies' },
+  'Bricolage': { fr: 'Bricolage', en: 'Tools & DIY' },
+};
+
+export const tr = (lang: Lang, key: string) => D[key]?.[lang] ?? key;
