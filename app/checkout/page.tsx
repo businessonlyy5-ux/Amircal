@@ -1,18 +1,20 @@
 'use client';
 import Link from 'next/link';
 import { useState } from 'react';
-import { formatMoney, getProduct, shippingFor } from '@/lib/data';
+import { formatMoney, shippingFor } from '@/lib/data';
 import { useStore } from '@/components/Store';
+import { useProductsByIds } from '@/components/useProducts';
 
 export default function CheckoutPage() {
   const { cart, currency, setCurrency } = useStore();
+  const { get, loading } = useProductsByIds(cart.map((l) => l.id));
   const [done, setDone] = useState(false);
-  const lines = cart.flatMap((l) => { const p = getProduct(l.id); return p ? [{ ...l, p }] : []; });
+  const lines = cart.flatMap((l) => { const p = get(l.id); return p ? [{ ...l, p }] : []; });
   const sub = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
   const ship = shippingFor(currency, sub);
   const inp = 'mt-1 w-full rounded border border-ink px-3 py-3';
   if (done) return (<main className='mx-auto max-w-xl px-4 py-16'><h1 className='mb-3 text-2xl font-bold'>Aperçu de la commande</h1><p className='border border-ink bg-soft p-4 text-sm'>Le paiement n’est pas encore activé : aucune commande n’a été créée et aucune donnée bancaire n’a été collectée. Cette étape sera connectée à un prestataire de paiement sécurisé.</p><Link href='/' className='mt-5 inline-block rounded bg-ink px-6 py-3 font-bold text-paper'>Retour à l’accueil</Link></main>);
-  if (!lines.length) return (<main className='mx-auto max-w-xl px-4 py-16 text-center'><p className='mb-3'>Votre panier est vide.</p><Link href='/products' className='underline'>Parcourir le catalogue</Link></main>);
+  if (!lines.length) return (<main className='mx-auto max-w-xl px-4 py-16 text-center'>{loading ? <p>Chargement…</p> : <><p className='mb-3'>Votre panier est vide.</p><Link href='/products' className='underline'>Parcourir le catalogue</Link></>}</main>);
   return (
     <main className='mx-auto grid max-w-5xl gap-6 px-4 py-6 md:grid-cols-[1fr_320px]'>
       <form onSubmit={(e) => { e.preventDefault(); setDone(true); }} className='space-y-4'>

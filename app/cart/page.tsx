@@ -1,8 +1,9 @@
 'use client';
 import Link from 'next/link';
-import { useMemo } from 'react';
-import { formatMoney, getProduct, PRODUCTS, shippingFor, type Product } from '@/lib/data';
+import { useEffect, useState } from 'react';
+import { formatMoney, shippingFor, type Product } from '@/lib/data';
 import { useStore } from '@/components/Store';
+import { useProductsByIds } from '@/components/useProducts';
 import { BoxIcon } from '@/components/Icons';
 import ProductCard from '@/components/ProductCard';
 
@@ -20,35 +21,41 @@ function Img({ p }: { p: Product }) {
 
 export default function CartPage() {
   const { cart, currency, setQty, remove } = useStore();
-  const lines = cart.flatMap((l) => { const p = getProduct(l.id); return p ? [{ ...l, p }] : []; });
+  const { get, loading } = useProductsByIds(cart.map((l) => l.id));
+  const lines = cart.flatMap((l) => { const p = get(l.id); return p ? [{ ...l, p }] : []; });
   const sub = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
   const ship = shippingFor(currency, sub);
   const threshold = currency === 'USD' ? 50 : 100;
   const left = Math.max(0, threshold - sub);
+  const firstCat = lines[0]?.p.category;
   const inCart = new Set(lines.map((l) => l.id));
-  const cats = new Set(lines.map((l) => l.p.category));
+  const [sugg, setSugg] = useState<Product[]>([]);
 
-  // Suggestions : si la livraison offerte est proche, les articles qui font atteindre le seuil ; sinon, des articles des mêmes catégories.
-  const suggestions = useMemo(() => {
-    const pool = PRODUCTS.filter((p) => p.stock > 0 && !inCart.has(p.id));
-    const sorted = left > 0
-      ? [...pool].sort((a, b) => Math.abs(a.price - left) - Math.abs(b.price - left))
-      : [...pool].sort((a, b) => Number(cats.has(b.category)) - Number(cats.has(a.category)));
-    return sorted.slice(0, 6);
+  // Suggestions : articles qui font atteindre la livraison offerte, sinon articles de la même catégorie.
+  useEffect(() => {
+    if (loading) return;
+    const qs = new URLSearchParams({ n: '8' });
+    if (lines.length === 0) { /* panier vide : sélection générale */ }
+    else if (left > 0) { qs.set('min', String(Math.max(1, Math.floor(left)))); qs.set('max', String(Math.ceil(left * 2.5))); }
+    else if (firstCat) qs.set('cat', firstCat);
+    let live = true;
+    fetch('/api/featured?' + qs.toString()).then((r) => r.json()).then((d: { products: Product[] }) => { if (live) setSugg(d.products); }).catch(() => {});
+    return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [left, cart.length]);
+  }, [loading, Math.round(left), firstCat, lines.length]);
+  const shown = sugg.filter((p) => !inCart.has(p.id)).slice(0, 6);
 
-  if (!lines.length) return (
+  if (!cart.length || (!lines.length && !loading)) return (
     <main className='mx-auto max-w-5xl px-4 py-12'>
       <div className='text-center'>
         <h1 className='mb-2 text-2xl font-bold'>Votre panier est vide</h1>
         <p className='mb-5 text-sm text-graphite'>Découvrez nos produits : livraison offerte dès {formatMoney(threshold, currency)} d’achats.</p>
         <Link href='/products' className='inline-block rounded bg-ink px-6 py-3 font-bold text-paper'>Parcourir le catalogue</Link>
       </div>
-      <h2 className='mb-3 mt-10 text-xl font-bold'>Nos sélections</h2>
-      <div className='grid grid-cols-2 gap-2.5 md:grid-cols-4'>{PRODUCTS.filter((p) => p.stock > 0).slice(0, 4).map((p) => (<ProductCard key={p.id} p={p} />))}</div>
+      {shown.length > 0 && (<><h2 className='mb-3 mt-10 text-xl font-bold'>Nos sélections</h2><div className='grid grid-cols-2 gap-2.5 md:grid-cols-4'>{shown.slice(0, 4).map((p) => (<ProductCard key={p.id} p={p} />))}</div></>)}
     </main>
   );
+  if (!lines.length) return <main className='mx-auto max-w-5xl px-4 py-12 text-center'>Chargement du panier…</main>;
 
   return (
     <main className='mx-auto max-w-5xl px-4 pb-24 pt-6 md:pb-10'>
@@ -67,7 +74,6 @@ export default function CartPage() {
               <div className='min-w-0 flex-1 text-sm'>
                 <Link href={'/products/' + l.id} className='line-clamp-2 font-medium'>{l.p.name}</Link>
                 {l.variant !== 'Standard' && <p className='text-neutral-600'>{l.variant}</p>}
-                <p className='text-neutral-600'>{l.p.stock > 0 ? 'En stock' : 'Rupture de stock'}</p>
                 <p className='mt-0.5 font-bold'>{formatMoney(l.p.price * l.qty, currency)}{l.qty > 1 && <span className='ml-1.5 text-xs font-normal text-neutral-500'>({formatMoney(l.p.price, currency)} l’unité)</span>}</p>
                 <div className='mt-1.5 flex items-center gap-3'>
                   <span className='inline-flex rounded border border-ink'><button onClick={() => setQty(l.id, l.variant, l.qty - 1)} aria-label='Moins' className='h-9 w-9'>−</button><span className='grid w-9 place-items-center'>{l.qty}</span><button onClick={() => setQty(l.id, l.variant, l.qty + 1)} aria-label='Plus' className='h-9 w-9'>+</button></span>
@@ -92,10 +98,12 @@ export default function CartPage() {
         </aside>
       </div>
 
-      <section className='mt-10'>
-        <h2 className='mb-3 text-xl font-bold'>{left > 0 ? 'Ajoutez ' + formatMoney(left, currency) + ' pour la livraison offerte' : 'Complétez votre commande'}</h2>
-        <div className='flex gap-2.5 overflow-x-auto pb-2'>{suggestions.map((p) => (<div key={p.id} className='w-40 flex-none'><ProductCard p={p} /></div>))}</div>
-      </section>
+      {shown.length > 0 && (
+        <section className='mt-10'>
+          <h2 className='mb-3 text-xl font-bold'>{left > 0 ? 'Ajoutez ' + formatMoney(left, currency) + ' pour la livraison offerte' : 'Complétez votre commande'}</h2>
+          <div className='flex gap-2.5 overflow-x-auto pb-2'>{shown.map((p) => (<div key={p.id} className='w-40 flex-none'><ProductCard p={p} /></div>))}</div>
+        </section>
+      )}
 
       <div className='fixed inset-x-0 bottom-14 z-30 flex items-center gap-3 border-t border-ink bg-paper px-4 py-2 md:hidden'>
         <div className='min-w-0 flex-1'><p className='text-xs text-neutral-600'>Total {ship === 0 ? '· livraison offerte' : ''}</p><b>{formatMoney(sub + ship, currency)}</b></div>

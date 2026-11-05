@@ -1,8 +1,8 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { CATEGORIES, PRODUCTS } from '@/lib/data';
+import { useEffect, useState } from 'react';
+import { CATEGORIES } from '@/lib/data';
 import { tr } from '@/lib/i18n';
 import { useStore } from './Store';
 import { CartIcon, HeartIcon } from './Icons';
@@ -16,8 +16,22 @@ export default function Header() {
   const t = (k: string) => tr(lang, k);
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
-  const s = q.trim().toLowerCase();
-  const sugg = s ? PRODUCTS.filter((p) => p.name.toLowerCase().includes(s)).slice(0, 5) : [];
+  const [sugg, setSugg] = useState<{ id: number; name: string }[]>([]);
+
+  useEffect(() => {
+    const term = q.trim();
+    if (term.length < 2) { setSugg([]); return; }
+    const ctl = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const r = await fetch('/api/search?q=' + encodeURIComponent(term), { signal: ctl.signal });
+        const d = (await r.json()) as { products: { id: number; name: string }[] };
+        setSugg(d.products);
+      } catch { /* annulé ou réseau */ }
+    }, 250);
+    return () => { clearTimeout(timer); ctl.abort(); };
+  }, [q]);
+
   const go = (e: React.FormEvent) => { e.preventDefault(); setOpen(false); router.push('/products?q=' + encodeURIComponent(q.trim())); };
   return (
     <header className='sticky top-0 z-30 bg-ink text-paper'>
@@ -28,7 +42,7 @@ export default function Header() {
           <input value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onBlur={() => setTimeout(() => setOpen(false), 150)} aria-label={t('nav.search')} placeholder={t('hdr.placeholder')} autoComplete='off' className='w-full rounded px-3.5 py-3 text-ink' />
           {open && sugg.length > 0 && (
             <ul className='absolute left-0 right-0 top-full z-40 border border-ink bg-paper text-ink'>
-              {sugg.map((p) => (<li key={p.id}><Link href={'/products/' + p.id} className='block border-b border-neutral-200 px-3.5 py-2.5 hover:bg-soft'>{p.name}</Link></li>))}
+              {sugg.map((p) => (<li key={p.id}><Link href={'/products/' + p.id} className='block truncate border-b border-neutral-200 px-3.5 py-2.5 hover:bg-soft'>{p.name}</Link></li>))}
               <li><button type='submit' className='w-full px-3.5 py-2.5 text-left font-medium hover:bg-soft'>{t('hdr.results')} « {q} »</button></li>
             </ul>
           )}

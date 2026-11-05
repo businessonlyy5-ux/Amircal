@@ -2,8 +2,9 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { formatMoney, getProduct, PRODUCTS, VARIANTS, type Product } from '@/lib/data';
+import { formatMoney, VARIANTS, type Product } from '@/lib/data';
 import { useStore } from './Store';
+import { useProductsByIds } from './useProducts';
 import { BoxIcon } from './Icons';
 import ProductCard from './ProductCard';
 
@@ -20,28 +21,25 @@ const FAQ = [
   ['Que faire si j’ai un problème avec ma commande ?', 'Contactez le service client avec votre numéro de commande : nous vous répondons au plus vite.'],
 ];
 
-function Stars({ n }: { n: number }) {
-  return <span aria-label={n + ' sur 5'} className='tracking-tight'>{'★'.repeat(Math.round(n))}{'☆'.repeat(5 - Math.round(n))}</span>;
-}
-
 function Thumb({ p, className = 'h-1/3 w-1/3' }: { p: Product; className?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
   return p.image ? <img src={p.image} alt={p.name} loading='lazy' className='h-full w-full object-contain' /> : <BoxIcon className={className} />;
 }
 
-export default function ProductDetail({ p }: { p: Product }) {
+export default function ProductDetail({ p, related }: { p: Product; related: Product[] }) {
   const router = useRouter();
   const { currency, add, cart } = useStore();
   const real = !!p.image; // les variantes ne sont proposées que pour les produits de démonstration
+  const imgs = p.images?.length ? p.images : p.image ? [p.image] : [];
+  const [img, setImg] = useState(0);
   const [color, setColor] = useState(VARIANTS.Couleur[0]);
   const [size, setSize] = useState(VARIANTS.Taille[1]);
   const [qty, setQty] = useState(1);
-  const [seen, setSeen] = useState<number[]>([]);
+  const [seenIds, setSeenIds] = useState<number[]>([]);
   const variant = real ? 'Standard' : color + ' / ' + size;
   const out = p.stock === 0;
 
-  const related = useMemo(() => [...PRODUCTS.filter((x) => x.category === p.category && x.id !== p.id), ...PRODUCTS.filter((x) => x.category !== p.category && x.id !== p.id)].filter((x) => x.stock > 0), [p]);
-  const bundle = useMemo(() => [p, ...related.slice(0, 2)].filter((x) => x.stock > 0), [p, related]);
+  const bundle = useMemo(() => [p, ...related.slice(0, 2)], [p, related]);
   const [picked, setPicked] = useState<number[]>(bundle.map((b) => b.id));
   useEffect(() => { setPicked(bundle.map((b) => b.id)); }, [bundle]);
   const bundleTotal = bundle.filter((b) => picked.includes(b.id)).reduce((s, b) => s + b.price, 0);
@@ -49,13 +47,15 @@ export default function ProductDetail({ p }: { p: Product }) {
   useEffect(() => {
     try {
       const prev: number[] = JSON.parse(localStorage.getItem('amircal_seen') ?? '[]');
-      setSeen(prev.filter((id) => id !== p.id).slice(0, 8));
+      setSeenIds(prev.filter((id) => id !== p.id).slice(0, 8));
       localStorage.setItem('amircal_seen', JSON.stringify([p.id, ...prev.filter((id) => id !== p.id)].slice(0, 12)));
     } catch { /* stockage indisponible */ }
   }, [p.id]);
 
+  const { get } = useProductsByIds([...cart.map((l) => l.id), ...seenIds]);
+  const seen = seenIds.map(get).filter((x): x is Product => !!x);
   const threshold = currency === 'USD' ? 50 : 100;
-  const cartSub = cart.reduce((s, l) => s + (getProduct(l.id)?.price ?? 0) * l.qty, 0);
+  const cartSub = cart.reduce((s, l) => s + (get(l.id)?.price ?? 0) * l.qty, 0);
   const left = Math.max(0, threshold - cartSub);
   const chip = (on: boolean) => 'mr-1.5 mb-1.5 rounded border px-3.5 py-2 text-sm ' + (on ? 'border-ink bg-ink text-paper' : 'border-neutral-400');
   const buy = () => { add(p.id, qty, variant); };
@@ -70,24 +70,34 @@ export default function ProductDetail({ p }: { p: Product }) {
       <p className='mb-3 text-xs text-neutral-600'><Link href='/products' className='underline'>Catalogue</Link> / <Link href={'/products?cat=' + encodeURIComponent(p.category)} className='underline'>{p.category}</Link> / {p.name}</p>
 
       <div className='grid gap-6 md:grid-cols-2 md:gap-10'>
-        <div className='relative grid aspect-square place-items-center overflow-hidden border border-neutral-200 bg-soft text-neutral-400'>
-          <Thumb p={p} />
-          {p.discount > 0 && <span className='absolute left-3 top-3 rounded-sm bg-ink px-2 py-1 text-xs font-bold text-paper'>-{p.discount}%</span>}
+        <div>
+          <div className='relative grid aspect-square place-items-center overflow-hidden border border-neutral-200 bg-soft text-neutral-400'>
+            {imgs.length ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={imgs[Math.min(img, imgs.length - 1)]} alt={p.name} className='h-full w-full object-contain' />) : <BoxIcon className='h-1/3 w-1/3' />}
+          </div>
+          {imgs.length > 1 && (
+            <div className='mt-2 flex gap-2 overflow-x-auto'>
+              {imgs.map((u, i) => (
+                <button key={u} onClick={() => setImg(i)} aria-label={'Image ' + (i + 1)} aria-current={img === i} className={'h-16 w-16 flex-none overflow-hidden bg-soft ' + (img === i ? 'border-2 border-ink' : 'border border-neutral-200')}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={u} alt='' loading='lazy' className='h-full w-full object-contain' />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className='md:sticky md:top-32 md:self-start'>
           <p className='text-xs font-semibold uppercase tracking-widest text-neutral-500'>{p.category}</p>
           <h1 className='mb-2 text-2xl font-extrabold leading-tight md:text-3xl'>{p.name}</h1>
-          <p className='text-sm'>{p.rating ? <><Stars n={p.rating} /> <span className='text-graphite'>{p.rating}</span></> : <span className='text-graphite'>Aucun avis pour le moment</span>}</p>
-          <p className='mt-3 text-3xl font-extrabold'>{formatMoney(p.price, currency)}{p.compareAt > 0 && <s className='ml-2 text-base font-normal text-neutral-500'>{formatMoney(p.compareAt, currency)}</s>}</p>
-          {p.compareAt > 0 && <p className='text-sm font-semibold'>Vous économisez {formatMoney(p.compareAt - p.price, currency)}</p>}
+          <p className='text-sm text-graphite'>Aucun avis pour le moment</p>
+          <p className='mt-3 text-3xl font-extrabold'>{formatMoney(p.price, currency)}</p>
 
           {!real && (<>
             <div className='mt-4'><b className='mb-1.5 block text-sm'>Couleur : {color}</b>{VARIANTS.Couleur.map((c) => (<button key={c} onClick={() => setColor(c)} aria-pressed={c === color} className={chip(c === color)}>{c}</button>))}</div>
             <div className='mt-2'><b className='mb-1.5 block text-sm'>Taille : {size}</b>{VARIANTS.Taille.map((s) => (<button key={s} onClick={() => setSize(s)} aria-pressed={s === size} className={chip(s === size)}>{s}</button>))}</div>
           </>)}
 
-          <p className='mt-3 flex items-center gap-2 text-sm'><span className={'h-2.5 w-2.5 rounded-full ' + (out ? 'bg-neutral-400' : 'bg-ink')} />{out ? 'Rupture de stock' : p.stock < 10 ? 'Stock limité : plus que ' + p.stock + ' disponibles' : 'En stock, prêt à expédier'}</p>
+          <p className='mt-3 flex items-center gap-2 text-sm'><span className={'h-2.5 w-2.5 rounded-full ' + (out ? 'bg-neutral-400' : 'bg-ink')} />{out ? 'Rupture de stock' : 'En stock, prêt à expédier'}</p>
 
           <div className='mt-4 flex flex-wrap items-center gap-3'>
             <span className='inline-flex rounded border border-ink'>
@@ -132,7 +142,7 @@ export default function ProductDetail({ p }: { p: Product }) {
             {['Commandez en USD ou en HTG', 'Suivi de colis disponible dans votre compte', 'Paiement sécurisé par un prestataire externe', 'Livraison vers les États-Unis et Haïti'].map((t) => (<li key={t} className='flex gap-2'><span aria-hidden>✓</span>{t}</li>))}
           </ul>
         </div>
-        <div className='rounded border border-neutral-200 p-4 text-sm leading-relaxed'><b>Description</b><br />{real ? 'La description détaillée et les caractéristiques de ce produit seront ajoutées prochainement.' : 'Description de démonstration.'}</div>
+        <div className='rounded border border-neutral-200 p-4 text-sm leading-relaxed'><b>Description</b><p className='mt-1 whitespace-pre-line'>{p.description && p.description !== p.name ? p.description : 'La description détaillée de ce produit sera ajoutée prochainement.'}</p></div>
       </section>
 
       <section className='mt-10'>
@@ -144,23 +154,20 @@ export default function ProductDetail({ p }: { p: Product }) {
 
       <section className='mt-10'>
         <h2 className='mb-3 text-xl font-bold'>Avis clients</h2>
-        {p.rating && !real ? (
-          <div className='grid gap-6 md:grid-cols-[220px_1fr]'>
-            <div><p className='text-4xl font-extrabold'>{p.rating}</p><Stars n={p.rating} /><p className='text-xs text-neutral-600'>Avis de démonstration</p></div>
-            <div>{['Très bon produit, conforme.', 'Livraison correcte.', 'Bon rapport qualité-prix.'].map((t, i) => (<div key={t} className='border-b border-neutral-200 py-2.5 text-sm'><Stars n={5 - (i % 2)} /> · Client {i + 1}<br />{t}</div>))}</div>
-          </div>
-        ) : <div className='border border-dashed border-neutral-400 p-8 text-center'>Soyez le premier à donner votre avis.</div>}
+        <div className='border border-dashed border-neutral-400 p-8 text-center'>Soyez le premier à donner votre avis.</div>
       </section>
 
-      <section className='mt-10'>
-        <h2 className='mb-3 text-xl font-bold'>Vous aimerez aussi</h2>
-        <div className='flex gap-2.5 overflow-x-auto pb-2'>{related.slice(0, 8).map((r) => (<div key={r.id} className='w-40 flex-none'><ProductCard p={r} /></div>))}</div>
-      </section>
+      {related.length > 0 && (
+        <section className='mt-10'>
+          <h2 className='mb-3 text-xl font-bold'>Vous aimerez aussi</h2>
+          <div className='flex gap-2.5 overflow-x-auto pb-2'>{related.map((r) => (<div key={r.id} className='w-40 flex-none'><ProductCard p={r} /></div>))}</div>
+        </section>
+      )}
 
       {seen.length > 0 && (
         <section className='mt-10'>
           <h2 className='mb-3 text-xl font-bold'>Consultés récemment</h2>
-          <div className='flex gap-2.5 overflow-x-auto pb-2'>{seen.map((id) => getProduct(id)).filter((x): x is Product => !!x).map((r) => (<div key={r.id} className='w-40 flex-none'><ProductCard p={r} /></div>))}</div>
+          <div className='flex gap-2.5 overflow-x-auto pb-2'>{seen.map((r) => (<div key={r.id} className='w-40 flex-none'><ProductCard p={r} /></div>))}</div>
         </section>
       )}
 
