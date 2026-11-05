@@ -1,4 +1,4 @@
-// Import du catalogue Zendrop (entrepôts US) -> Supabase + lib/catalog.json.
+// Import du catalogue Zendrop (entrepôts US) -> Supabase + lib/catalog.json, puis synchronisation des variantes.
 //
 // Variables d'environnement :
 //   ZENDROP_API_KEY            (obligatoire) jeton d'accès Zendrop, envoyé en « Bearer » au serveur MCP
@@ -6,6 +6,12 @@
 //   NEXT_PUBLIC_SUPABASE_URL   (optionnel, valeur par défaut = projet Amircal)
 //   MAX_PER_CATEGORY           (défaut 200) nouveaux produits maximum par catégorie du site
 //   DRY_RUN=1                  compte seulement les produits disponibles, n'écrit rien
+//
+// Le job GitHub s'arrête à 60 min. Le script se limite donc lui-même :
+//   - collecte des produits : 38 min au maximum, répartis équitablement entre les catégories ;
+//   - variantes Zendrop (couleurs, tailles, identifiants de commande) : jusqu'à la 54e minute.
+// Ce qui n'a pas eu le temps d'être fait est simplement repris au lancement suivant
+// (les produits déjà en base sont ignorés, seuls les produits sans variante réelle sont traités).
 //
 // Le nettoyage des fiches (HTML, CSS parasite, entités, longueur) est fait ici.
 // Prix : base_price_usd = cost_usd = prix Zendrop ; la marge est appliquée par le site (lib/data.ts).
@@ -24,6 +30,10 @@ const PAGE = 60;
 const MAX_PAGES = 20; // pages lues au maximum par requête
 const MAX_COST = 300; // on ignore les produits plus chers (USD)
 const STOCK_PLACEHOLDER = 25; // même valeur que le catalogue actuel (stock réel : à synchroniser plus tard)
+const T0 = Date.now();
+const PRODUCTS_DEADLINE = T0 + 38 * 60 * 1000;
+const VARIANTS_DEADLINE = T0 + 54 * 60 * 1000;
+const CONCURRENCY = 6; // appels Zendrop en parallèle pour les variantes
 const BLOCK = /\b(cbd|thc|hemp|kratom|vapes?|vaping|tobacco|cigar(s|ettes?)?|firearms?|guns?|ammo|ammunition|weapons?|erotic|sex|lingerie|pepper spray|taser)\b/i;
 
 if (!TOKEN) throw new Error('ZENDROP_API_KEY manquant');
@@ -118,12 +128,12 @@ function accept(p, q) {
   return { id: p.id, name, cost, image, images: (p.images || []).map((i) => i.url).filter(Boolean).slice(0, 5), description: cleanDescription(p.description, name) };
 }
 
-async function collect(site, queries, skipIds) {
+async function collect(site, queries, skipIds, deadline = Infinity) {
   const states = queries.map((q) => ({ q, page: 1, done: false, found: 0 }));
   const out = [];
-  while (out.length < MAX && states.some((s) => !s.done)) {
+  while (out.length < MAX && Date.now() < deadline && states.some((s) => !s.done)) {
     for (const s of states) {
-      if (s.done || out.length >= MAX) continue;
+      if (s.done || out.length >= MAX || Date.now() >= deadline) continue;
       const args = { limit: PAGE, page: s.page, ships_from: 'US' };
       if (s.q.cat) args.category_id = s.q.cat;
       if (s.q.kw) args.keyword = s.q.kw;
@@ -145,7 +155,17 @@ async function collect(site, queries, skipIds) {
 async function sb(path, opts = {}) {
   const res = await fetch(`${SB_URL}/rest/v1/${path}`, { ...opts, headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', ...(opts.headers || {}) } });
   if (!res.ok) throw new Error(`Supabase ${res.status} : ${(await res.text()).slice(0, 300)}`);
-  return res.status === 204 ? null : res.json();
+  if (res.status === 204) return null;
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+async function sbAll(path) {
+  const rows = [];
+  for (let off = 0; ; off += 1000) {
+    const part = await sb(`${path}&limit=1000&offset=${off}`);
+    rows.push(...part);
+    if (part.length < 1000) return rows;
+  }
 }
 async function existingSupplierIds() {
   const ids = new Set();
@@ -180,6 +200,48 @@ async function saveToSupabase(site, items, categoryId, already) {
   return saved;
 }
 
+// ---------- Variantes Zendrop ----------
+// Pour chaque produit Zendrop sans variante réelle : on lit sa fiche, on enregistre toutes ses variantes
+// (identifiant Zendrop, SKU, couleur / taille, prix coûtant), puis on supprime la variante provisoire éventuelle.
+const emptyLabel = (s) => !s || /^default( title)?$/i.test(s);
+function variantOptions(v) {
+  const o = {};
+  const color = String(v.color ?? '').trim();
+  const size = String(v.size ?? '').trim();
+  if (!emptyLabel(color)) o['Couleur'] = color;
+  if (!emptyLabel(size)) o['Taille'] = size;
+  return o;
+}
+
+async function syncVariants() {
+  const prods = await sbAll('products?select=id,supplier_product_id&supplier=eq.zendrop&is_active=eq.true&order=id');
+  const real = new Set((await sbAll('product_variants?select=product_id&supplier_variant_id=not.is.null&order=id')).map((r) => r.product_id));
+  const todo = prods.filter((p) => p.supplier_product_id && !real.has(p.id));
+  console.log(`Variantes : ${todo.length} produits à traiter sur ${prods.length}.`);
+  let next = 0, ok = 0, empty = 0, failed = 0;
+  const worker = async () => {
+    while (next < todo.length && Date.now() < VARIANTS_DEADLINE) {
+      const p = todo[next++];
+      try {
+        const d = await callTool('get_catalog_product', { product_id: Number(p.supplier_product_id) });
+        const vs = (d.variants || []).filter((v) => v.variant_id && Number(v.price) > 0).slice(0, 40);
+        if (!vs.length) { empty++; continue; }
+        const rows = vs.map((v) => ({ product_id: p.id, supplier_variant_id: String(v.variant_id), sku: v.sku || null, options: variantOptions(v), price_usd: Number(v.price), cost_usd: Number(v.price), stock: STOCK_PLACEHOLDER, is_active: true }));
+        await sb('product_variants', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(rows) });
+        await sb(`product_variants?product_id=eq.${p.id}&supplier_variant_id=is.null`, { method: 'DELETE' });
+        ok++;
+      } catch (e) {
+        failed++;
+        if (failed <= 10) console.warn(`  ! variantes ${p.supplier_product_id} : ${e.message}`);
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: CONCURRENCY }, worker));
+  const left = Math.max(0, todo.length - next);
+  console.log(`Variantes : ${ok} produits mis à jour, ${empty} sans variante exploitable, ${failed} erreurs, ${left} restants (relancer l'import pour les traiter).`);
+  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `\nVariantes : **${ok}** produits mis à jour, ${empty} sans variante, ${failed} erreurs, **${left}** restants (relancer pour continuer).\n`);
+}
+
 // ---------- Programme principal ----------
 await initMcp();
 const catalogPath = new URL('../lib/catalog.json', import.meta.url);
@@ -196,8 +258,13 @@ if (!DRY) {
 
 const summary = [];
 const added = [];
-for (const [site, queries] of Object.entries(NICHES)) {
-  const items = await collect(site, queries, skipIds);
+const cats = Object.entries(NICHES);
+for (let k = 0; k < cats.length; k++) {
+  const [site, queries] = cats[k];
+  // Chaque catégorie reçoit une part égale du temps restant (sauf en test à blanc, sans limite de temps).
+  const slice = (PRODUCTS_DEADLINE - Date.now()) / (cats.length - k);
+  const deadline = DRY ? Infinity : slice > 5000 ? Date.now() + slice : 0;
+  const items = deadline === 0 ? [] : await collect(site, queries, skipIds, deadline);
   const have = existing.filter((p) => p.category === site).length;
   let saved = 0;
   if (!DRY && items.length) {
@@ -219,3 +286,6 @@ if (DRY) { console.log('DRY_RUN : aucune écriture.'); process.exit(0); }
 const all = [...existing, ...added];
 await writeFile(catalogPath, '[\n' + all.map((p) => '  ' + JSON.stringify(p)).join(',\n') + '\n]\n');
 console.log(`lib/catalog.json : ${all.length} produits.`);
+
+// Les variantes passent en dernier : si cette étape échoue, le catalogue est déjà enregistré.
+try { await syncVariants(); } catch (e) { console.warn(`  ! synchronisation des variantes interrompue : ${e.message}`); }
