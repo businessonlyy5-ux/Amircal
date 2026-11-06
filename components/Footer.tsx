@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useStore } from './Store';
+import { RATE_HTG } from '@/lib/data';
 import { tr } from '@/lib/i18n';
 import Flag from './Flag';
 import Logo from './Logo';
@@ -23,6 +24,7 @@ export default function Footer() {
             <button onClick={() => setCurrency('HTG')} aria-pressed={currency === 'HTG'} aria-label={en ? 'Haitian gourde (Haiti)' : 'Gourde haïtienne (Haïti)'} className={pill(currency === 'HTG')}><Flag code='HT' />HTG</button>
           </div>
           <p className='text-xs text-neutral-400'>{currency === 'USD' ? (en ? 'US dollar' : 'Dollar américain') : (en ? 'Haitian gourde' : 'Gourde haïtienne')} · {t('ft.secure')}</p>
+          <p className='text-xs text-neutral-400'>1 USD ≈ {RATE_HTG.toLocaleString(en ? 'en-US' : 'fr-FR', { maximumFractionDigits: 2 })} HTG</p>
           <b className='mt-2 block'>{t('ft.lang')}</b>
           <div role='group' aria-label={t('ft.lang')} className='mt-1 flex gap-2'>
             <button onClick={() => setLang('fr')} aria-pressed={lang === 'fr'} lang='fr' className={pill(lang === 'fr')}>FR</button>

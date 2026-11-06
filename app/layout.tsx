@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { StoreProvider } from '@/components/Store';
+import RateInit from '@/components/RateInit';
 import AnnouncementBar from '@/components/AnnouncementBar';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import MobileNav from '@/components/MobileNav';
 import { getCategories } from '@/lib/categories';
+import { getRate } from '@/lib/rate';
 
 export const revalidate = 300;
 export const metadata: Metadata = {
@@ -16,10 +18,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const categories = await getCategories();
+  const [categories, rate] = await Promise.all([getCategories(), getRate()]);
   return (
     <html lang='fr'>
       <body className='pb-16 md:pb-0'>
+        <RateInit rate={rate} />
         <StoreProvider>
           <AnnouncementBar />
           <Header categories={categories} />
