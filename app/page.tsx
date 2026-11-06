@@ -44,29 +44,25 @@ export default async function Home() {
         </div>
       </section>
 
+      {latest.items.length > 0 && <ProductRow title='Nouveautés' products={latest.items} />}
+
       {collections.length > 0 && (
-        <section className='bg-soft'>
-          <div className='mx-auto max-w-7xl px-4 py-6'>
-            <h2 className='mb-3 text-xl font-bold'>Collections</h2>
-            <div className='grid grid-cols-2 gap-2.5 md:grid-cols-4 md:gap-4'>
-              {collections.slice(0, 4).map((c) => (
-                <Link key={c.slug} href={'/products?col=' + c.slug} className='group overflow-hidden rounded border border-neutral-200 bg-paper shadow-sm'>
-                  <span className='grid aspect-[4/3] place-items-center overflow-hidden bg-white'>
-                    {c.image ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={c.image} alt='' loading='lazy' className='h-full w-full object-contain p-3 transition-transform group-hover:scale-105' />) : <BoxIcon className='h-1/4 w-1/4 text-neutral-400' />}
-                  </span>
-                  <span className='block border-t-2 border-gold bg-ink px-3 py-2.5 text-paper'>
-                    <span className='block text-[10px] font-semibold uppercase tracking-[.16em] text-gold'>Collection</span>
-                    <span className='block font-bold leading-tight'><CatName c={c} /></span>
-                    {c.description && <span className='mt-0.5 block text-xs text-neutral-300'>{c.description}</span>}
-                  </span>
-                </Link>
-              ))}
-            </div>
+        <section className='mx-auto max-w-7xl px-4 py-6'>
+          <h2 className='mb-3 text-xl font-bold'>Collections</h2>
+          <div className='flex gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-4 md:gap-4 md:overflow-visible'>
+            {collections.slice(0, 4).map((c) => (
+              <Link key={c.slug} href={'/products?col=' + c.slug} className='group w-40 flex-none md:w-auto'>
+                <span className='grid aspect-square place-items-center overflow-hidden rounded-lg border border-neutral-200 bg-white'>
+                  {c.image ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={c.image} alt='' loading='lazy' className='h-full w-full object-contain p-3 transition-transform group-hover:scale-105' />) : <BoxIcon className='h-1/4 w-1/4 text-neutral-400' />}
+                </span>
+                <span className='mt-2 block font-bold leading-tight'><CatName c={c} /></span>
+                {c.description && <span className='block text-xs text-graphite'>{c.description}</span>}
+              </Link>
+            ))}
           </div>
         </section>
       )}
 
-      {latest.items.length > 0 && <ProductRow title='Nouveautés' products={latest.items} />}
       {rows.map((r, i) => r.items.length > 0 && <ProductRow key={rowCats[i].slug} title={<CatName c={rowCats[i]} />} products={r.items} band={i % 2 === 1} href={'/products?cat=' + rowCats[i].slug} />)}
       {grid.items.length > 0 && (
         <section className='mx-auto max-w-7xl px-4 py-6'>
