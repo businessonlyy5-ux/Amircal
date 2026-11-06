@@ -17,5 +17,6 @@ export default async function Page({ params }: Props) {
   const p = await getProduct(Number((await params).id));
   if (!p) notFound();
   const rel = await related(p, 8);
-  return <ProductDetail p={p} related={rel} />;
+  // key : repart de zéro (image, quantité, variante choisie) quand on passe d'un produit à un autre.
+  return <ProductDetail key={p.id} p={p} related={rel} />;
 }

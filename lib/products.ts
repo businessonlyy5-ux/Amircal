@@ -3,19 +3,33 @@ import { sbPublic } from './supabase/public';
 import { MARGIN, type Product } from './data';
 
 const SEL = 'id,supplier_product_id,title,description,base_price_usd,categories(name),product_images(url,sort_order)';
+// Page produit : on charge aussi les variantes Zendrop.
+const SEL_DETAIL = SEL + ',product_variants(supplier_variant_id,options,price_usd,is_active)';
+type VRow = { supplier_variant_id: string | null; options: Record<string, string> | null; price_usd: number | string; is_active: boolean };
 type Row = {
   id: string; supplier_product_id: string | null; title: string; description: string | null; base_price_usd: number | string;
   categories: { name: string } | { name: string }[] | null; product_images: { url: string; sort_order: number }[] | null;
+  product_variants?: VRow[] | null;
 };
 
 function toProduct(r: Row): Product {
   const cat = Array.isArray(r.categories) ? r.categories[0]?.name : r.categories?.name;
   const imgs = [...(r.product_images ?? [])].sort((a, b) => a.sort_order - b.sort_order).map((i) => i.url);
+  const base = Number(r.base_price_usd);
+  // Le panier facture le prix du produit : on ne propose donc que les variantes au même prix (ou moins cher) que lui.
+  // Les variantes plus chères (ex. lot de 2) seront proposées quand le panier gèrera un prix par variante.
+  const variants = (r.product_variants ?? [])
+    .filter((v) => v.is_active && v.supplier_variant_id && Number(v.price_usd) <= base + 0.005)
+    .map((v) => {
+      const options = v.options ?? {};
+      return { id: v.supplier_variant_id as string, options, label: Object.values(options).join(' / ') || 'Standard' };
+    });
   return {
     id: Number(r.supplier_product_id), name: r.title, category: cat ?? '',
-    price: Math.round(Number(r.base_price_usd) * MARGIN * 100) / 100,
+    price: Math.round(base * MARGIN * 100) / 100,
     compareAt: 0, discount: 0, rating: 0, stock: 25, // stock réel : à synchroniser plus tard
     image: imgs[0], images: imgs, description: r.description ?? undefined,
+    variants: variants.length ? variants : undefined,
   };
 }
 const valid = (p: Product) => Number.isFinite(p.id) && p.id > 0;
@@ -56,7 +70,7 @@ export async function listProducts(o: ListOpts): Promise<ListResult> {
 
 export const getProduct = cache(async (id: number): Promise<Product | null> => {
   if (!Number.isInteger(id) || id <= 0) return null;
-  const { data } = await sbPublic().from('products').select(SEL).eq('supplier', 'zendrop').eq('supplier_product_id', String(id)).eq('is_active', true).limit(1);
+  const { data } = await sbPublic().from('products').select(SEL_DETAIL).eq('supplier', 'zendrop').eq('supplier_product_id', String(id)).eq('is_active', true).limit(1);
   const r = ((data ?? []) as unknown as Row[])[0];
   return r ? toProduct(r) : null;
 });
