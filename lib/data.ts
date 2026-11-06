@@ -1,10 +1,13 @@
 // Types, constantes et formats communs. Produits, catégories et taux viennent de Supabase (lib/products.ts, lib/categories.ts, lib/rate.ts).
 export type Currency = 'USD' | 'HTG';
+// Variante Zendrop : options = { Couleur: 'Noir', Taille: 'M' }, label = options réunies pour le panier.
+export type Variant = { options: Record<string, string>; label?: string };
 export type Product = {
   id: number; // identifiant Zendrop (supplier_product_id)
   name: string; category: string;
   price: number; compareAt: number; discount: number; rating: number; stock: number;
   image?: string; images?: string[]; description?: string;
+  variants?: Variant[]; // chargées uniquement sur la fiche produit (getProduct)
 };
 
 export const MARGIN = 2.5; // provisoire : prix affiché = prix Zendrop x MARGIN

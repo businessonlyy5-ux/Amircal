@@ -3,19 +3,29 @@ import { sbPublic } from './supabase/public';
 import { MARGIN, type Product } from './data';
 
 const SEL = 'id,supplier_product_id,title,description,base_price_usd,categories(name),product_images(url,sort_order)';
+// La fiche produit charge aussi les variantes Zendrop (couleur, taille…).
+const SEL_DETAIL = SEL + ',product_variants(options,is_active)';
 type Row = {
   id: string; supplier_product_id: string | null; title: string; description: string | null; base_price_usd: number | string;
   categories: { name: string } | { name: string }[] | null; product_images: { url: string; sort_order: number }[] | null;
+  product_variants?: { options: Record<string, unknown> | null; is_active: boolean }[] | null;
 };
 
 function toProduct(r: Row): Product {
   const cat = Array.isArray(r.categories) ? r.categories[0]?.name : r.categories?.name;
   const imgs = [...(r.product_images ?? [])].sort((a, b) => a.sort_order - b.sort_order).map((i) => i.url);
+  const variants = (r.product_variants ?? [])
+    .filter((v) => v.is_active && v.options && typeof v.options === 'object' && Object.keys(v.options).length > 0)
+    .map((v) => {
+      const options = Object.fromEntries(Object.entries(v.options ?? {}).map(([k, x]) => [k, String(x)]));
+      return { options, label: Object.values(options).join(' / ') };
+    });
   return {
     id: Number(r.supplier_product_id), name: r.title, category: cat ?? '',
     price: Math.round(Number(r.base_price_usd) * MARGIN * 100) / 100,
     compareAt: 0, discount: 0, rating: 0, stock: 25, // stock réel : à synchroniser plus tard
     image: imgs[0], images: imgs, description: r.description ?? undefined,
+    variants: variants.length ? variants : undefined,
   };
 }
 const valid = (p: Product) => Number.isFinite(p.id) && p.id > 0;
@@ -60,7 +70,7 @@ export async function listProducts(o: ListOpts): Promise<ListResult> {
 
 export const getProduct = cache(async (id: number): Promise<Product | null> => {
   if (!Number.isInteger(id) || id <= 0) return null;
-  const { data } = await sbPublic().from('products').select(SEL).eq('supplier', 'zendrop').eq('supplier_product_id', String(id)).eq('is_active', true).limit(1);
+  const { data } = await sbPublic().from('products').select(SEL_DETAIL).eq('supplier', 'zendrop').eq('supplier_product_id', String(id)).eq('is_active', true).limit(1);
   const r = ((data ?? []) as unknown as Row[])[0];
   return r ? toProduct(r) : null;
 });
