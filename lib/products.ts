@@ -12,6 +12,15 @@ type Row = {
   product_variants?: VRow[] | null;
 };
 
+// Titres fournisseurs : on retire les parenthèses de spécifications techniques (« (as1, alpha, one_size, …) »),
+// un fragment de parenthèse coupé en fin de titre et la ponctuation orpheline. Le titre en base n'est pas modifié.
+const tidy = (t: string) => t
+  .replace(/\s*\((?:[^()]*,){2,}[^()]*\)/g, '')
+  .replace(/\s*\([^)]*$/, '')
+  .replace(/\s*[-–,;:|]+\s*$/, '')
+  .replace(/\s{2,}/g, ' ')
+  .trim() || t;
+
 function toProduct(r: Row): Product {
   const cat = Array.isArray(r.categories) ? r.categories[0]?.name : r.categories?.name;
   const imgs = [...(r.product_images ?? [])].sort((a, b) => a.sort_order - b.sort_order).map((i) => i.url);
@@ -25,7 +34,7 @@ function toProduct(r: Row): Product {
       return { id: v.supplier_variant_id as string, options, label: Object.values(options).join(' / ') || 'Standard' };
     });
   return {
-    id: Number(r.supplier_product_id), name: r.title, category: cat ?? '',
+    id: Number(r.supplier_product_id), name: tidy(r.title), category: cat ?? '',
     price: Math.round(base * MARGIN * 100) / 100,
     compareAt: 0, discount: 0, rating: 0, stock: 25, // stock réel : à synchroniser plus tard
     image: imgs[0], images: imgs, description: r.description ?? undefined,
