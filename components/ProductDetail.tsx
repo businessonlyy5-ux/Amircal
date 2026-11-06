@@ -26,7 +26,8 @@ function Thumb({ p, className = 'h-1/3 w-1/3' }: { p: Product; className?: strin
   return p.image ? <img src={p.image} alt={p.name} loading='lazy' className='h-full w-full object-contain' /> : <BoxIcon className={className} />;
 }
 
-export default function ProductDetail({ p, related }: { p: Product; related: Product[] }) {
+// reviews : carrousel d’avis (serveur) ; summary : moyenne et nombre d’avis publiés pour ce produit.
+export default function ProductDetail({ p, related, reviews, summary }: { p: Product; related: Product[]; reviews?: React.ReactNode; summary?: { avg: number; count: number } }) {
   const router = useRouter();
   const { currency, add, cart } = useStore();
   const real = !!p.image; // produits Zendrop : variantes réelles ; sans image = produit de démonstration (couleurs/tailles fictives)
@@ -104,7 +105,7 @@ export default function ProductDetail({ p, related }: { p: Product; related: Pro
         <div className='md:sticky md:top-32 md:self-start'>
           <p className='text-xs font-semibold uppercase tracking-widest text-neutral-500'>{p.category}</p>
           <h1 className='mb-2 text-2xl font-extrabold leading-tight md:text-3xl'>{p.name}</h1>
-          <p className='text-sm text-graphite'>Aucun avis pour le moment</p>
+          <p className='text-sm text-graphite'>{summary ? <><span aria-label={summary.avg + ' sur 5'} className='text-gold-deep'>{'★'.repeat(Math.round(summary.avg))}{'☆'.repeat(5 - Math.round(summary.avg))}</span> {summary.avg} · {summary.count} avis</> : 'Aucun avis pour le moment'}</p>
           <p className='mt-3 text-3xl font-extrabold'>{formatMoney(p.price, currency)}</p>
 
           {real && Object.entries(groups).map(([k, values]) => (
@@ -117,6 +118,8 @@ export default function ProductDetail({ p, related }: { p: Product; related: Pro
             <div className='mt-4'><b className='mb-1.5 block text-sm'>Couleur : {color}</b>{VARIANTS.Couleur.map((c) => (<button key={c} onClick={() => setColor(c)} aria-pressed={c === color} className={chip(c === color)}>{c}</button>))}</div>
             <div className='mt-2'><b className='mb-1.5 block text-sm'>Taille : {size}</b>{VARIANTS.Taille.map((s) => (<button key={s} onClick={() => setSize(s)} aria-pressed={s === size} className={chip(s === size)}>{s}</button>))}</div>
           </>)}
+
+          {reviews}
 
           <p className='mt-3 flex items-center gap-2 text-sm'><span className={'h-2.5 w-2.5 rounded-full ' + (out ? 'bg-neutral-400' : 'bg-ink')} />{out ? 'Rupture de stock' : 'En stock, prêt à expédier'}</p>
 
@@ -173,10 +176,12 @@ export default function ProductDetail({ p, related }: { p: Product; related: Pro
         </div>
       </section>
 
-      <section className='mt-10'>
-        <h2 className='mb-3 text-xl font-bold'>Avis clients</h2>
-        <div className='border border-dashed border-neutral-400 p-8 text-center'>Soyez le premier à donner votre avis.</div>
-      </section>
+      {!reviews && (
+        <section className='mt-10'>
+          <h2 className='mb-3 text-xl font-bold'>Avis clients</h2>
+          <div className='border border-dashed border-neutral-400 p-8 text-center'>Soyez le premier à donner votre avis.</div>
+        </section>
+      )}
 
       {related.length > 0 && (
         <section className='mt-10'>
