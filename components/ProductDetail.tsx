@@ -29,14 +29,29 @@ function Thumb({ p, className = 'h-1/3 w-1/3' }: { p: Product; className?: strin
 export default function ProductDetail({ p, related }: { p: Product; related: Product[] }) {
   const router = useRouter();
   const { currency, add, cart } = useStore();
-  const real = !!p.image; // les variantes ne sont proposées que pour les produits de démonstration
+  const real = !!p.image; // produits Zendrop : variantes réelles ; sans image = produit de démonstration (couleurs/tailles fictives)
   const imgs = p.images?.length ? p.images : p.image ? [p.image] : [];
   const [img, setImg] = useState(0);
   const [color, setColor] = useState(VARIANTS.Couleur[0]);
   const [size, setSize] = useState(VARIANTS.Taille[1]);
   const [qty, setQty] = useState(1);
   const [seenIds, setSeenIds] = useState<number[]>([]);
-  const variant = real ? 'Standard' : color + ' / ' + size;
+
+  // Variantes Zendrop réelles : un groupe de choix par option (Couleur, Taille…).
+  const vs = useMemo(() => p.variants ?? [], [p.variants]);
+  const groups = useMemo(() => {
+    const g: Record<string, string[]> = {};
+    for (const v of vs) for (const [k, val] of Object.entries(v.options)) { const a = (g[k] ??= []); if (!a.includes(val)) a.push(val); }
+    return g;
+  }, [vs]);
+  const [sel, setSel] = useState<Record<string, string>>(() => ({ ...(vs[0]?.options ?? {}) }));
+  const pick = (k: string, val: string) => {
+    const next = { ...sel, [k]: val };
+    const exact = vs.find((v) => Object.entries(next).every(([a, b]) => v.options[a] === b));
+    setSel(exact ? exact.options : (vs.find((v) => v.options[k] === val)?.options ?? next)); // combinaison absente : on garde la valeur choisie et on adapte les autres options
+  };
+  const chosen = vs.find((v) => Object.entries(sel).every(([a, b]) => v.options[a] === b));
+  const variant = real ? (chosen?.label || 'Standard') : color + ' / ' + size;
   const out = p.stock === 0;
 
   const bundle = useMemo(() => [p, ...related.slice(0, 2)], [p, related]);
@@ -92,6 +107,12 @@ export default function ProductDetail({ p, related }: { p: Product; related: Pro
           <p className='text-sm text-graphite'>Aucun avis pour le moment</p>
           <p className='mt-3 text-3xl font-extrabold'>{formatMoney(p.price, currency)}</p>
 
+          {real && Object.entries(groups).map(([k, values]) => (
+            <div key={k} className='mt-4'>
+              <b className='mb-1.5 block text-sm'>{k} : {sel[k]}</b>
+              {values.map((val) => (<button key={val} onClick={() => pick(k, val)} aria-pressed={val === sel[k]} className={chip(val === sel[k])}>{val}</button>))}
+            </div>
+          ))}
           {!real && (<>
             <div className='mt-4'><b className='mb-1.5 block text-sm'>Couleur : {color}</b>{VARIANTS.Couleur.map((c) => (<button key={c} onClick={() => setColor(c)} aria-pressed={c === color} className={chip(c === color)}>{c}</button>))}</div>
             <div className='mt-2'><b className='mb-1.5 block text-sm'>Taille : {size}</b>{VARIANTS.Taille.map((s) => (<button key={s} onClick={() => setSize(s)} aria-pressed={s === size} className={chip(s === size)}>{s}</button>))}</div>
