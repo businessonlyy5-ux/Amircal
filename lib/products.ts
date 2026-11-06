@@ -54,7 +54,13 @@ async function categoryId(value: string) {
   return ((byName.data ?? []) as { id: string }[])[0]?.id ?? null;
 }
 
-export type ListOpts = { q?: string; cat?: string; min?: number; max?: number; sort?: string; page?: number; per?: number };
+// Une sous-catégorie se désigne par son slug, au sein d’une catégorie.
+async function subcategoryId(catId: string, slug: string) {
+  const { data } = await sbPublic().from('subcategories').select('id').eq('category_id', catId).eq('slug', slug).eq('is_active', true).limit(1);
+  return ((data ?? []) as { id: string }[])[0]?.id ?? null;
+}
+
+export type ListOpts = { q?: string; cat?: string; sub?: string; min?: number; max?: number; sort?: string; page?: number; per?: number };
 export type ListResult = { items: Product[]; total: number; pages: number; page: number };
 
 export async function listProducts(o: ListOpts): Promise<ListResult> {
@@ -63,8 +69,11 @@ export async function listProducts(o: ListOpts): Promise<ListResult> {
   const empty = { items: [], total: 0, pages: 1, page: 1 };
   const catId = o.cat ? await categoryId(o.cat) : null;
   if (o.cat && !catId) return empty;
+  const subId = catId && o.sub ? await subcategoryId(catId, o.sub) : null;
+  if (o.sub && catId && !subId) return empty;
   let f = sbPublic().from('products').select(SEL, { count: 'exact' }).eq('is_active', true).not('supplier_product_id', 'is', null);
   if (catId) f = f.eq('category_id', catId);
+  if (subId) f = f.eq('subcategory_id', subId);
   const term = o.q ? clean(o.q) : '';
   if (term) f = f.ilike('title', '%' + term + '%');
   if (o.min && o.min > 0) f = f.gte('base_price_usd', o.min / MARGIN);
