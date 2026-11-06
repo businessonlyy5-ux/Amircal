@@ -18,18 +18,18 @@ export default function Footer() {
         <div><b className='block'>{t('ft.help')}</b>{t('ft.track')}<br />{t('ft.ship')}<br />{t('ft.returns')}</div>
         <div><b className='block'>{t('ft.account')}</b><Link href='/login'>{t('ft.login')}</Link><br /><Link href='/wishlist'>{t('ft.wish')}</Link><br /><Link href='/cart'>{t('ft.cart')}</Link></div>
         <div className='col-span-2 md:col-span-1'>
-          <b className='block'>{t('ft.cur')}</b>
+          <b className='block'>{t('ft.lang')}</b>
+          <div role='group' aria-label={t('ft.lang')} className='mt-1 flex flex-wrap gap-2'>
+            <button onClick={() => setLang('fr')} aria-pressed={lang === 'fr'} aria-label='Français' lang='fr' className={pill(lang === 'fr')}><Flag code='HT' />FR</button>
+            <button onClick={() => setLang('en')} aria-pressed={lang === 'en'} aria-label='English' lang='en' className={pill(lang === 'en')}><Flag code='US' />EN</button>
+          </div>
+          <b className='mt-2 block'>{t('ft.cur')}</b>
           <div role='group' aria-label={t('ft.cur')} className='mt-1 flex flex-wrap gap-2'>
-            <button onClick={() => setCurrency('USD')} aria-pressed={currency === 'USD'} aria-label={en ? 'US dollar (United States)' : 'Dollar américain (États-Unis)'} className={pill(currency === 'USD')}><Flag code='US' />USD</button>
-            <button onClick={() => setCurrency('HTG')} aria-pressed={currency === 'HTG'} aria-label={en ? 'Haitian gourde (Haiti)' : 'Gourde haïtienne (Haïti)'} className={pill(currency === 'HTG')}><Flag code='HT' />HTG</button>
+            <button onClick={() => setCurrency('USD')} aria-pressed={currency === 'USD'} aria-label={en ? 'US dollar' : 'Dollar américain'} className={pill(currency === 'USD')}>USD</button>
+            <button onClick={() => setCurrency('HTG')} aria-pressed={currency === 'HTG'} aria-label={en ? 'Haitian gourde' : 'Gourde haïtienne'} className={pill(currency === 'HTG')}>HTG</button>
           </div>
-          <p className='text-xs text-neutral-400'>{currency === 'USD' ? (en ? 'US dollar' : 'Dollar américain') : (en ? 'Haitian gourde' : 'Gourde haïtienne')} · {t('ft.secure')}</p>
-          <p className='text-xs text-neutral-400'>1 USD ≈ {RATE_HTG.toLocaleString(en ? 'en-US' : 'fr-FR', { maximumFractionDigits: 2 })} HTG</p>
-          <b className='mt-2 block'>{t('ft.lang')}</b>
-          <div role='group' aria-label={t('ft.lang')} className='mt-1 flex gap-2'>
-            <button onClick={() => setLang('fr')} aria-pressed={lang === 'fr'} lang='fr' className={pill(lang === 'fr')}>FR</button>
-            <button onClick={() => setLang('en')} aria-pressed={lang === 'en'} lang='en' className={pill(lang === 'en')}>EN</button>
-          </div>
+          <p className='text-xs text-neutral-400'>{currency === 'USD' ? (en ? 'US dollar' : 'Dollar américain') : (en ? 'Haitian gourde' : 'Gourde haïtienne')} · 1 USD ≈ {RATE_HTG.toLocaleString(en ? 'en-US' : 'fr-FR', { maximumFractionDigits: 2 })} HTG</p>
+          <p className='text-xs text-neutral-400'>{t('ft.secure')}</p>
         </div>
       </div>
       <p className='border-t border-neutral-700 px-4 py-4 text-center text-xs text-neutral-400'>© AMIRCAL. {t('ft.rights')}</p>

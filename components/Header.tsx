@@ -14,7 +14,7 @@ export default function Header({ categories }: { categories: Cat[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const onProductPage = /^\/products\/[^/]+/.test(pathname ?? ''); // barre de catégories masquée sur les fiches produit
-  const { currency, setCurrency, count, wish, lang } = useStore();
+  const { currency, setCurrency, count, wish, lang, setLang } = useStore();
   const t = (k: string) => tr(lang, k);
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -36,11 +36,12 @@ export default function Header({ categories }: { categories: Cat[] }) {
 
   const go = (e: React.FormEvent) => { e.preventDefault(); setOpen(false); router.push('/products?q=' + encodeURIComponent(q.trim())); };
   const htg = currency === 'HTG';
+  const fr = lang === 'fr';
   return (
     <header className='sticky top-0 z-30 bg-ink text-paper'>
       <div className='mx-auto flex max-w-7xl items-center gap-3 px-4 py-3'>
         <Logo />
-        <div className='hidden items-center gap-2 text-xs leading-tight lg:flex'><Flag code={htg ? 'HT' : 'US'} className='h-4 w-6' /><span>{t('hdr.deliver')}<b className='block text-[13px]'>{htg ? t('hdr.ht') : t('hdr.us')}</b></span></div>
+        <div className='hidden text-xs leading-tight lg:block'>{t('hdr.deliver')}<b className='block text-[13px]'>{htg ? t('hdr.ht') : t('hdr.us')}</b></div>
         <form onSubmit={go} role='search' className='relative min-w-0 flex-1'>
           <input value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onBlur={() => setTimeout(() => setOpen(false), 150)} aria-label={t('nav.search')} placeholder={t('hdr.placeholder')} autoComplete='off' className='w-full rounded px-3.5 py-3 text-ink' />
           {open && sugg.length > 0 && (
@@ -50,7 +51,8 @@ export default function Header({ categories }: { categories: Cat[] }) {
             </ul>
           )}
         </form>
-        <button onClick={() => setCurrency(htg ? 'USD' : 'HTG')} aria-label={htg ? 'HTG → USD' : 'USD → HTG'} className='hidden items-center gap-1.5 whitespace-nowrap px-2 text-sm md:flex'><Flag code={htg ? 'HT' : 'US'} />{htg ? 'HTG' : 'USD'}</button>
+        <button onClick={() => setLang(fr ? 'en' : 'fr')} aria-label={fr ? 'Switch to English' : 'Passer en français'} className='hidden items-center gap-1.5 whitespace-nowrap px-2 text-sm md:flex'><Flag code={fr ? 'HT' : 'US'} />{fr ? 'FR' : 'EN'}</button>
+        <button onClick={() => setCurrency(htg ? 'USD' : 'HTG')} aria-label={htg ? 'HTG → USD' : 'USD → HTG'} className='hidden whitespace-nowrap px-2 text-sm md:block'>{htg ? 'HTG' : 'USD'}</button>
         <Link href='/login' className='hidden px-2 text-sm md:block'>{t('hdr.account')}</Link>
         <Link href='/wishlist' aria-label={t('nav.wish')} className='relative hidden p-2 md:block'><HeartIcon className='h-6 w-6' />{wish.length > 0 && <span className='absolute right-0 top-0 min-w-4 rounded-full bg-paper px-1 text-[10px] font-bold text-ink'>{wish.length}</span>}</Link>
         <Link href='/cart' aria-label={t('nav.cart')} className='relative hidden p-2 md:block'><CartIcon className='h-6 w-6' />{count > 0 && <span className='absolute right-0 top-0 min-w-4 rounded-full bg-paper px-1 text-[10px] font-bold text-ink'>{count}</span>}</Link>
