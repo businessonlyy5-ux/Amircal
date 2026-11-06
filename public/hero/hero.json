@@ -1,5 +1,6 @@
 [
-  { "src": "61426.jpg", "href": "/products?cat=beaute-soins", "alt": "Beauté et soins" },
-  { "src": "NTL-Slider-After--min.jpeg", "href": "/products?cat=maison-cuisine", "alt": "Maison et cuisine" },
-  { "src": "NTL_desktop_hero.jpeg", "href": "/products?cat=maison-cuisine", "alt": "Textiles et décoration" }
+  { "href": "/products?cat=electronique", "alt": "Electronique" },
+  { "href": "/products?cat=maison-cuisine", "alt": "Maison et cuisine" },
+  { "href": "/products?cat=beaute-soins", "alt": "Beaute et soins" },
+  { "href": "/products", "alt": "Tout le catalogue" }
 ]
