@@ -15,9 +15,9 @@ header a:hover, header > div button:hover { color: var(--gold); }
 header nav a { transition: color .15s; }
 header nav a:hover { color: var(--gold); }
 header nav a:first-child { color: var(--gold); }
+/* Pied de page blanc : filet doré en haut, liens or foncé au survol. */
 footer { border-top: 3px solid var(--gold); }
-footer b { color: var(--gold); letter-spacing: .04em; }
-footer a:hover { color: var(--gold); }
+footer a:hover { color: var(--gold-text); }
 
 /* En-tête clair (style boutique) : texte foncé sur fond blanc, or plus foncé au survol (contraste suffisant). */
 header.hdr-light a:hover, header.hdr-light button:hover, header.hdr-light > div button:hover { color: var(--gold-text); }
