@@ -3,10 +3,8 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type { Cat } from '@/lib/categories';
 import { useStore } from './Store';
-import { RATE_HTG } from '@/lib/data';
 import { tr } from '@/lib/i18n';
 import CatName from './CatName';
-import Flag from './Flag';
 import Logo from './Logo';
 
 // Section de liens : accordéon sur mobile, colonne sur ordinateur.
@@ -25,11 +23,11 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+// La langue et la devise se changent dans l’en-tête (et dans le menu sur mobile), pas dans le pied de page.
 export default function Footer({ categories }: { categories: Cat[] }) {
-  const { lang, setLang, currency, setCurrency } = useStore();
+  const { lang } = useStore();
   const t = (k: string) => tr(lang, k);
   const en = lang === 'en';
-  const pill = (on: boolean) => 'inline-flex items-center gap-2 rounded border px-3 py-1.5 text-xs font-bold tracking-widest ' + (on ? 'border-gold bg-gold text-ink' : 'border-neutral-600 text-paper');
   const L = en
     ? {
         shop: 'Shop', all: 'All categories', register: 'Create an account', countries: 'United States · Haiti',
@@ -47,7 +45,7 @@ export default function Footer({ categories }: { categories: Cat[] }) {
       </ul>
 
       <div className='border-t border-neutral-700'>
-        <div className='mx-auto max-w-7xl px-4 py-8 md:grid md:grid-cols-[1.3fr_1fr_1fr_1fr_1.2fr] md:gap-8'>
+        <div className='mx-auto max-w-7xl px-4 py-8 md:grid md:grid-cols-[1.4fr_1fr_1fr_1fr] md:gap-8'>
           <div className='mb-6 md:mb-0'>
             <Logo className='mb-3 h-6' />
             <p className='text-sm text-neutral-300'>{t('ft.tag')}</p>
@@ -71,21 +69,6 @@ export default function Footer({ categories }: { categories: Cat[] }) {
             <li><Link href='/wishlist' className='hover:text-gold'>{t('ft.wish')}</Link></li>
             <li><Link href='/cart' className='hover:text-gold'>{t('ft.cart')}</Link></li>
           </Section>
-
-          <div className='mt-6 md:mt-0'>
-            <b className='block'>{t('ft.lang')}</b>
-            <div role='group' aria-label={t('ft.lang')} className='mt-2 flex flex-wrap gap-2'>
-              <button onClick={() => setLang('fr')} aria-pressed={lang === 'fr'} aria-label='Français' lang='fr' className={pill(lang === 'fr')}><Flag code='HT' />FR</button>
-              <button onClick={() => setLang('en')} aria-pressed={lang === 'en'} aria-label='English' lang='en' className={pill(lang === 'en')}><Flag code='US' />EN</button>
-            </div>
-            <b className='mt-4 block'>{t('ft.cur')}</b>
-            <div role='group' aria-label={t('ft.cur')} className='mt-2 flex flex-wrap gap-2'>
-              <button onClick={() => setCurrency('USD')} aria-pressed={currency === 'USD'} aria-label={en ? 'US dollar' : 'Dollar américain'} className={pill(currency === 'USD')}>USD</button>
-              <button onClick={() => setCurrency('HTG')} aria-pressed={currency === 'HTG'} aria-label={en ? 'Haitian gourde' : 'Gourde haïtienne'} className={pill(currency === 'HTG')}>HTG</button>
-            </div>
-            <p className='mt-3 text-xs text-neutral-400'>{currency === 'USD' ? (en ? 'US dollar' : 'Dollar américain') : (en ? 'Haitian gourde' : 'Gourde haïtienne')} · 1 USD ≈ {RATE_HTG.toLocaleString(en ? 'en-US' : 'fr-FR', { maximumFractionDigits: 2 })} HTG</p>
-            <p className='mt-1 text-xs text-neutral-400'>{t('ft.secure')}</p>
-          </div>
         </div>
       </div>
 
