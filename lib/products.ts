@@ -3,26 +3,38 @@ import { sbPublic } from './supabase/public';
 import { MARGIN, type Product } from './data';
 
 const SEL = 'id,supplier_product_id,title,description,base_price_usd,categories(name),product_images(url,sort_order)';
-// La fiche produit charge aussi les variantes Zendrop (couleur, taille…).
-const SEL_DETAIL = SEL + ',product_variants(options,is_active)';
+// La fiche produit charge aussi les variantes Zendrop (couleur, taille…) avec leur prix.
+const SEL_DETAIL = SEL + ',product_variants(options,price_usd,is_active)';
 type Row = {
   id: string; supplier_product_id: string | null; title: string; description: string | null; base_price_usd: number | string;
   categories: { name: string } | { name: string }[] | null; product_images: { url: string; sort_order: number }[] | null;
-  product_variants?: { options: Record<string, unknown> | null; is_active: boolean }[] | null;
+  product_variants?: { options: Record<string, unknown> | null; price_usd: number | string; is_active: boolean }[] | null;
 };
+
+// Titres fournisseurs : on retire les parenthèses de spécifications techniques (« (as1, alpha, one_size, …) »),
+// un fragment de parenthèse coupé en fin de titre et la ponctuation orpheline. Le titre en base n'est pas modifié.
+const tidy = (t: string) => t
+  .replace(/\s*\((?:[^()]*,){2,}[^()]*\)/g, '')
+  .replace(/\s*\([^)]*$/, '')
+  .replace(/\s*[-–,;:|]+\s*$/, '')
+  .replace(/\s{2,}/g, ' ')
+  .trim() || t;
 
 function toProduct(r: Row): Product {
   const cat = Array.isArray(r.categories) ? r.categories[0]?.name : r.categories?.name;
   const imgs = [...(r.product_images ?? [])].sort((a, b) => a.sort_order - b.sort_order).map((i) => i.url);
+  const base = Number(r.base_price_usd);
+  // Le panier facture le prix du produit : on ne propose donc que les variantes au même prix (ou moins cher) que lui.
+  // Les variantes plus chères (lot de 2, lot de 30…) seront proposées quand le panier gèrera un prix par variante.
   const variants = (r.product_variants ?? [])
-    .filter((v) => v.is_active && v.options && typeof v.options === 'object' && Object.keys(v.options).length > 0)
+    .filter((v) => v.is_active && v.options && typeof v.options === 'object' && Object.keys(v.options).length > 0 && Number(v.price_usd) <= base + 0.005)
     .map((v) => {
       const options = Object.fromEntries(Object.entries(v.options ?? {}).map(([k, x]) => [k, String(x)]));
       return { options, label: Object.values(options).join(' / ') };
     });
   return {
-    id: Number(r.supplier_product_id), name: r.title, category: cat ?? '',
-    price: Math.round(Number(r.base_price_usd) * MARGIN * 100) / 100,
+    id: Number(r.supplier_product_id), name: tidy(r.title), category: cat ?? '',
+    price: Math.round(base * MARGIN * 100) / 100,
     compareAt: 0, discount: 0, rating: 0, stock: 25, // stock réel : à synchroniser plus tard
     image: imgs[0], images: imgs, description: r.description ?? undefined,
     variants: variants.length ? variants : undefined,
@@ -41,8 +53,14 @@ async function categoryId(value: string) {
   return ((byName.data ?? []) as { id: string }[])[0]?.id ?? null;
 }
 
-// cat : une catégorie ; cats : plusieurs catégories (collections). Prix min/max en USD affichés.
-export type ListOpts = { q?: string; cat?: string; cats?: string[]; min?: number; max?: number; sort?: string; page?: number; per?: number };
+// Une sous-catégorie se désigne par son slug, au sein d’une catégorie (table subcategories).
+async function subcategoryId(catId: string, slug: string) {
+  const { data } = await sbPublic().from('subcategories').select('id').eq('category_id', catId).eq('slug', slug).eq('is_active', true).limit(1);
+  return ((data ?? []) as { id: string }[])[0]?.id ?? null;
+}
+
+// cat : une catégorie ; sub : une sous-catégorie de cette catégorie ; cats : plusieurs catégories (collections). Prix min/max en USD affichés.
+export type ListOpts = { q?: string; cat?: string; sub?: string; cats?: string[]; min?: number; max?: number; sort?: string; page?: number; per?: number };
 export type ListResult = { items: Product[]; total: number; pages: number; page: number };
 
 export async function listProducts(o: ListOpts): Promise<ListResult> {
@@ -51,11 +69,14 @@ export async function listProducts(o: ListOpts): Promise<ListResult> {
   const empty = { items: [], total: 0, pages: 1, page: 1 };
   const catId = o.cat ? await categoryId(o.cat) : null;
   if (o.cat && !catId) return empty;
+  const subId = catId && o.sub ? await subcategoryId(catId, o.sub) : null;
+  if (o.sub && catId && !subId) return empty;
   const multi = !o.cat && o.cats?.length ? ((await Promise.all(o.cats.map(categoryId))).filter(Boolean) as string[]) : [];
   if (!o.cat && o.cats?.length && multi.length === 0) return empty;
   let f = sbPublic().from('products').select(SEL, { count: 'exact' }).eq('is_active', true).not('supplier_product_id', 'is', null);
   if (catId) f = f.eq('category_id', catId);
   else if (multi.length) f = f.in('category_id', multi);
+  if (subId) f = f.eq('subcategory_id', subId);
   const term = o.q ? clean(o.q) : '';
   if (term) f = f.ilike('title', '%' + term + '%');
   if (o.min && o.min > 0) f = f.gte('base_price_usd', o.min / MARGIN);
