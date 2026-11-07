@@ -20,6 +20,11 @@ footer b { color: var(--gold); letter-spacing: .04em; }
 footer a:hover { color: var(--gold); }
 nav[aria-label='Navigation mobile'] { border-top: 2px solid var(--gold); }
 
+/* En-tête clair (style boutique) : texte foncé sur fond blanc, or plus foncé au survol (contraste suffisant). */
+header.hdr-light a:hover, header.hdr-light button:hover, header.hdr-light > div button:hover { color: var(--gold-text); }
+header.hdr-light nav a:hover { color: var(--gold-text); }
+header.hdr-light nav a:first-child { color: #000; }
+
 /* ---- Liens dorés (texte foncé sur fond blanc) ---- */
 main a.underline { color: var(--gold-text); text-decoration-color: var(--gold); text-underline-offset: 3px; font-weight: 500; }
 main a.underline:hover { color: #000; }
