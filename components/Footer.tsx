@@ -6,6 +6,7 @@ import { useStore } from './Store';
 import { tr } from '@/lib/i18n';
 import CatName from './CatName';
 import Logo from './Logo';
+import Reassurance from './Reassurance';
 
 // Section de liens : accordéon sur mobile, colonne sur ordinateur.
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -29,22 +30,13 @@ export default function Footer({ categories }: { categories: Cat[] }) {
   const t = (k: string) => tr(lang, k);
   const en = lang === 'en';
   const L = en
-    ? {
-        shop: 'Shop', all: 'All categories', register: 'Create an account', countries: 'United States · Haiti',
-        perks: [['Order tracking', 'Tracking number as soon as it ships'], ['Secure payment', 'No card stored on AMIRCAL'], ['USD and HTG', 'Prices in your currency'], ['Customer service', 'A team to help you']],
-      }
-    : {
-        shop: 'Boutique', all: 'Toutes les catégories', register: 'Créer un compte', countries: 'États-Unis · Haïti',
-        perks: [['Suivi de commande', 'Numéro de suivi dès l’expédition'], ['Paiement sécurisé', 'Aucune carte stockée sur AMIRCAL'], ['USD et HTG', 'Prix affichés dans votre devise'], ['Service client', 'Une équipe pour vous aider']],
-      };
+    ? { shop: 'Shop', all: 'All categories', register: 'Create an account', countries: 'United States · Haiti', pay: 'Secure payments' }
+    : { shop: 'Boutique', all: 'Toutes les catégories', register: 'Créer un compte', countries: 'États-Unis · Haïti', pay: 'Paiements sécurisés' };
 
   return (
-    <footer className='mt-8 bg-ink text-paper'>
-      <ul className='mx-auto grid max-w-7xl grid-cols-2 gap-x-4 gap-y-4 px-4 py-6 text-center text-xs md:grid-cols-4 md:text-sm'>
-        {L.perks.map(([a, b]) => (<li key={a}><b className='block'>{a}</b><span className='text-neutral-400'>{b}</span></li>))}
-      </ul>
-
-      <div className='border-t border-neutral-700'>
+    <>
+      <Reassurance />
+      <footer className='bg-ink text-paper'>
         <div className='mx-auto max-w-7xl px-4 py-8 md:grid md:grid-cols-[1.4fr_1fr_1fr_1fr] md:gap-8'>
           <div className='mb-6 md:mb-0'>
             <Logo className='mb-3 h-6' />
@@ -58,9 +50,10 @@ export default function Footer({ categories }: { categories: Cat[] }) {
           </Section>
 
           <Section title={t('ft.help')}>
-            <li>{t('ft.track')}</li>
-            <li>{t('ft.ship')}</li>
-            <li>{t('ft.returns')}</li>
+            <li><Link href='/aide/livraison#suivi' className='hover:text-gold'>{t('ft.track')}</Link></li>
+            <li><Link href='/aide/livraison' className='hover:text-gold'>{t('ft.ship')}</Link></li>
+            <li><Link href='/aide/paiements' className='hover:text-gold'>{L.pay}</Link></li>
+            <li><Link href='/aide/retours' className='hover:text-gold'>{t('ft.returns')}</Link></li>
           </Section>
 
           <Section title={t('ft.account')}>
@@ -70,9 +63,9 @@ export default function Footer({ categories }: { categories: Cat[] }) {
             <li><Link href='/cart' className='hover:text-gold'>{t('ft.cart')}</Link></li>
           </Section>
         </div>
-      </div>
 
-      <p className='border-t border-neutral-700 px-4 py-4 text-center text-xs text-neutral-400'>© {new Date().getFullYear()} AMIRCAL. {t('ft.rights')}</p>
-    </footer>
+        <p className='border-t border-neutral-700 px-4 py-4 text-center text-xs text-neutral-400'>© {new Date().getFullYear()} AMIRCAL. {t('ft.rights')}</p>
+      </footer>
+    </>
   );
 }
