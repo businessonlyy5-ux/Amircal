@@ -5,7 +5,6 @@ import RateInit from '@/components/RateInit';
 import AnnouncementBar from '@/components/AnnouncementBar';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import MobileNav from '@/components/MobileNav';
 import { getCategories } from '@/lib/categories';
 import { getRate } from '@/lib/rate';
 
@@ -21,14 +20,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const [categories, rate] = await Promise.all([getCategories(), getRate()]);
   return (
     <html lang='fr'>
-      <body className='pb-16 md:pb-0'>
+      <body>
         <RateInit rate={rate} />
         <StoreProvider>
           <AnnouncementBar />
           <Header categories={categories} />
           {children}
-          <Footer />
-          <MobileNav />
+          <Footer categories={categories} />
         </StoreProvider>
       </body>
     </html>
