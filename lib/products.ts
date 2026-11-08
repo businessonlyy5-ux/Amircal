@@ -2,17 +2,33 @@ import { cache } from 'react';
 import { sbPublic } from './supabase/public';
 import { MARGIN, type Product } from './data';
 
-const SEL = 'id,supplier_product_id,title,description,base_price_usd,categories(name),product_images(url,sort_order)';
+// sell_price_usd : prix habituel calculé en base (grille par tranche de coût) ; sale_percent : remise proposée, appliquée seulement si la vente est activée (site_settings, clé « sale »).
+const SEL = 'id,supplier_product_id,title,description,base_price_usd,sell_price_usd,sale_percent,categories(name),product_images(url,sort_order)';
 // La fiche produit charge aussi les variantes Zendrop (couleur, taille…) avec leur prix.
 const SEL_DETAIL = SEL + ',product_variants(options,price_usd,is_active)';
 type Row = {
   id: string; supplier_product_id: string | null; title: string; description: string | null; base_price_usd: number | string;
+  sell_price_usd: number | string | null; sale_percent: number | string | null;
   categories: { name: string } | { name: string }[] | null; product_images: { url: string; sort_order: number }[] | null;
   product_variants?: { options: Record<string, unknown> | null; price_usd: number | string; is_active: boolean }[] | null;
 };
 
+// Vente en cours ? Désactivée par défaut : aucun prix barré tant qu’elle n’est pas activée (et elle s’arrête seule à ends_at).
+type SaleCfg = { enabled?: boolean; label?: string; label_en?: string; ends_at?: string | null };
+export const getSale = cache(async (): Promise<SaleCfg | null> => {
+  try {
+    const { data } = await sbPublic().from('site_settings').select('value').eq('key', 'sale').limit(1);
+    const v = ((data ?? []) as { value: SaleCfg }[])[0]?.value;
+    if (!v?.enabled) return null;
+    if (v.ends_at && new Date(v.ends_at).getTime() < Date.now()) return null;
+    return v;
+  } catch {
+    return null;
+  }
+});
+
 // Titres fournisseurs : on retire les parenthèses de spécifications techniques (« (as1, alpha, one_size, …) »),
-// un fragment de parenthèse coupé en fin de titre et la ponctuation orpheline. Le titre en base n'est pas modifié.
+// un fragment de parenthèse coupé en fin de titre et la ponctuation orpheline. Le titre en base n’est pas modifié.
 const tidy = (t: string) => t
   .replace(/\s*\((?:[^()]*,){2,}[^()]*\)/g, '')
   .replace(/\s*\([^)]*$/, '')
@@ -20,7 +36,7 @@ const tidy = (t: string) => t
   .replace(/\s{2,}/g, ' ')
   .trim() || t;
 
-function toProduct(r: Row): Product {
+function toProduct(r: Row, saleOn: boolean): Product {
   const cat = Array.isArray(r.categories) ? r.categories[0]?.name : r.categories?.name;
   const imgs = [...(r.product_images ?? [])].sort((a, b) => a.sort_order - b.sort_order).map((i) => i.url);
   const base = Number(r.base_price_usd);
@@ -32,10 +48,18 @@ function toProduct(r: Row): Product {
       const options = Object.fromEntries(Object.entries(v.options ?? {}).map(([k, x]) => [k, String(x)]));
       return { options, label: Object.values(options).join(' / ') };
     });
+
+  // Prix habituel (grille de prix en base) ; repli sur l’ancien calcul si absent.
+  const regular = r.sell_price_usd != null ? Number(r.sell_price_usd) : Math.round(base * MARGIN * 100) / 100;
+  const pct = saleOn ? Number(r.sale_percent ?? 0) : 0;
+  let price = regular, compareAt = 0, discount = 0;
+  if (pct > 0) {
+    const sale = Math.ceil(regular * (1 - pct / 100)) - 0.01; // arrondi vers le haut, terminé en .99 : la marge est préservée
+    if (sale > 0 && sale < regular) { price = Math.round(sale * 100) / 100; compareAt = regular; discount = Math.round((1 - price / regular) * 100); }
+  }
   return {
     id: Number(r.supplier_product_id), name: tidy(r.title), category: cat ?? '',
-    price: Math.round(base * MARGIN * 100) / 100,
-    compareAt: 0, discount: 0, rating: 0, stock: 25, // stock réel : à synchroniser plus tard
+    price, compareAt, discount, rating: 0, stock: 25, // stock réel : à synchroniser plus tard
     image: imgs[0], images: imgs, description: r.description ?? undefined,
     variants: variants.length ? variants : undefined,
   };
@@ -59,8 +83,7 @@ async function subcategoryId(catId: string, slug: string) {
   return ((data ?? []) as { id: string }[])[0]?.id ?? null;
 }
 
-// cat : une catégorie ; sub : une sous-catégorie de cette catégorie ; cats : plusieurs catégories (collections). Prix min/max en USD affichés.
-// sort : « rel » (défaut) = notre sélection (produits choisis d’abord, puis meilleure fiche) ; « new » = nouveautés ; « asc » / « desc » = prix.
+// cat : une catégorie ; sub : une sous-catégorie de cette catégorie ; cats : plusieurs catégories (collections). Prix min/max en USD (prix habituel).
 export type ListOpts = { q?: string; cat?: string; sub?: string; cats?: string[]; min?: number; max?: number; sort?: string; page?: number; per?: number };
 export type ListResult = { items: Product[]; total: number; pages: number; page: number };
 
@@ -80,37 +103,34 @@ export async function listProducts(o: ListOpts): Promise<ListResult> {
   if (subId) f = f.eq('subcategory_id', subId);
   const term = o.q ? clean(o.q) : '';
   if (term) f = f.ilike('title', '%' + term + '%');
-  if (o.min && o.min > 0) f = f.gte('base_price_usd', o.min / MARGIN);
-  if (o.max && o.max > 0) f = f.lte('base_price_usd', o.max / MARGIN);
-  const sorted = o.sort === 'asc' ? f.order('base_price_usd', { ascending: true })
-    : o.sort === 'desc' ? f.order('base_price_usd', { ascending: false })
-    : o.sort === 'new' ? f.order('created_at', { ascending: false })
-    : f.order('featured_rank', { ascending: true, nullsFirst: false }).order('sort_score', { ascending: false });
+  if (o.min && o.min > 0) f = f.gte('sell_price_usd', o.min);
+  if (o.max && o.max > 0) f = f.lte('sell_price_usd', o.max);
+  const sorted = o.sort === 'asc' ? f.order('sell_price_usd', { ascending: true }) : o.sort === 'desc' ? f.order('sell_price_usd', { ascending: false }) : f.order('created_at', { ascending: false });
   const from = (page - 1) * per;
-  const { data, count, error } = await sorted.order('id').range(from, from + per - 1);
+  const [{ data, count, error }, sale] = await Promise.all([sorted.order('id').range(from, from + per - 1), getSale()]);
   if (error) return empty;
   const total = count ?? 0;
-  return { items: ((data ?? []) as unknown as Row[]).map(toProduct).filter(valid), total, pages: Math.max(1, Math.ceil(total / per)), page };
-}
-
-// Produits tendance de la page d’accueil : choisis à la main (colonne trending_rank), dans l’ordre. from–to = plage de rangs.
-export async function trending(from = 1, to = 12): Promise<Product[]> {
-  const { data } = await sbPublic().from('products').select(SEL).eq('is_active', true).not('supplier_product_id', 'is', null).gte('trending_rank', from).lte('trending_rank', to).order('trending_rank');
-  return ((data ?? []) as unknown as Row[]).map(toProduct).filter(valid);
+  return { items: ((data ?? []) as unknown as Row[]).map((r) => toProduct(r, !!sale)).filter(valid), total, pages: Math.max(1, Math.ceil(total / per)), page };
 }
 
 export const getProduct = cache(async (id: number): Promise<Product | null> => {
   if (!Number.isInteger(id) || id <= 0) return null;
-  const { data } = await sbPublic().from('products').select(SEL_DETAIL).eq('supplier', 'zendrop').eq('supplier_product_id', String(id)).eq('is_active', true).limit(1);
+  const [{ data }, sale] = await Promise.all([
+    sbPublic().from('products').select(SEL_DETAIL).eq('supplier', 'zendrop').eq('supplier_product_id', String(id)).eq('is_active', true).limit(1),
+    getSale(),
+  ]);
   const r = ((data ?? []) as unknown as Row[])[0];
-  return r ? toProduct(r) : null;
+  return r ? toProduct(r, !!sale) : null;
 });
 
 export async function getProductsByIds(ids: number[]): Promise<Product[]> {
   const list = [...new Set(ids.filter((i) => Number.isInteger(i) && i > 0))].slice(0, 40);
   if (!list.length) return [];
-  const { data } = await sbPublic().from('products').select(SEL).eq('supplier', 'zendrop').eq('is_active', true).in('supplier_product_id', list.map(String));
-  return ((data ?? []) as unknown as Row[]).map(toProduct).filter(valid);
+  const [{ data }, sale] = await Promise.all([
+    sbPublic().from('products').select(SEL).eq('supplier', 'zendrop').eq('is_active', true).in('supplier_product_id', list.map(String)),
+    getSale(),
+  ]);
+  return ((data ?? []) as unknown as Row[]).map((r) => toProduct(r, !!sale)).filter(valid);
 }
 
 export async function related(p: Product, n = 8): Promise<Product[]> {
