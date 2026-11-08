@@ -25,7 +25,7 @@ export default async function Page({ params }: Props) {
   const [rel, cats, up] = await Promise.all([related(p, 8), getCategories(), complements(p, 3)]);
   const slug = cats.find((c) => c.name === p.category)?.slug;
   const reviews = await getTestimonials(p.id, slug);
-  const summary = reviews.length ? { avg: Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10, count: reviews.length } : undefined;
+  const summary = reviews.length ? { avg: Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10, count: reviews.length, sample: reviews.every((r) => r.sample) } : undefined;
   // key : repart de zéro (image, quantité, variante choisie) quand on passe d’un produit à un autre.
   return <ProductDetail key={p.id} p={p} related={rel} upsell={up} beforeAfter={beforeAfter(p.id)} summary={summary} reviews={reviews.length ? <TestimonialCarousel items={reviews} /> : undefined} />;
 }

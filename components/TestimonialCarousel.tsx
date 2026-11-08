@@ -7,6 +7,7 @@ function Stars({ n }: { n: number }) {
 }
 
 // Carrousel d’avis clients : défilement automatique, pause au survol et au toucher, flèches, points.
+// Les avis d’exemple (sample) sont signalés par une mention discrète sous le carrousel.
 export default function TestimonialCarousel({ items }: { items: Testimonial[] }) {
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -45,6 +46,7 @@ export default function TestimonialCarousel({ items }: { items: Testimonial[] })
           <button onClick={() => go(i + 1)} aria-label='Avis suivant' className='h-7 w-7 rounded-full border border-ink text-sm'>›</button>
         </div>
       )}
+      {items.some((t) => t.sample) && <p className='mt-1.5 text-center text-[11px] text-neutral-500'>Avis d’exemple — contenu de démonstration</p>}
     </div>
   );
 }
