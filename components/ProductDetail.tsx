@@ -26,8 +26,9 @@ function Thumb({ p, className = 'h-1/3 w-1/3' }: { p: Product; className?: strin
   return p.image ? <img src={p.image} alt={p.name} loading='lazy' className='h-full w-full object-contain' /> : <BoxIcon className={className} />;
 }
 
-// reviews : carrousel d’avis (serveur) ; summary : moyenne et nombre d’avis publiés pour ce produit.
-export default function ProductDetail({ p, related, reviews, summary }: { p: Product; related: Product[]; reviews?: React.ReactNode; summary?: { avg: number; count: number } }) {
+// reviews : carrousel d’avis (serveur) ; summary : moyenne et nombre d’avis publiés pour ce produit ;
+// upsell : articles qui complètent ce produit (ex. oreiller -> masque de sommeil), choisis côté serveur.
+export default function ProductDetail({ p, related, upsell, reviews, summary }: { p: Product; related: Product[]; upsell?: Product[]; reviews?: React.ReactNode; summary?: { avg: number; count: number } }) {
   const router = useRouter();
   const { currency, add, cart } = useStore();
   const real = !!p.image; // produits Zendrop : variantes réelles ; sans image = produit de démonstration (couleurs/tailles fictives)
@@ -55,7 +56,9 @@ export default function ProductDetail({ p, related, reviews, summary }: { p: Pro
   const variant = real ? (chosen?.label || 'Standard') : color + ' / ' + size;
   const out = p.stock === 0;
 
-  const bundle = useMemo(() => [p, ...related.slice(0, 2)], [p, related]);
+  // Articles complémentaires en priorité ; à défaut, les produits de la même catégorie.
+  const hasUpsell = !!upsell?.length;
+  const bundle = useMemo(() => (upsell?.length ? [p, ...upsell.slice(0, 3)] : [p, ...related.slice(0, 2)]), [p, related, upsell]);
   const [picked, setPicked] = useState<number[]>(bundle.map((b) => b.id));
   useEffect(() => { setPicked(bundle.map((b) => b.id)); }, [bundle]);
   const bundleTotal = bundle.filter((b) => picked.includes(b.id)).reduce((s, b) => s + b.price, 0);
@@ -142,13 +145,15 @@ export default function ProductDetail({ p, related, reviews, summary }: { p: Pro
 
       {bundle.length > 1 && (
         <section className='mt-10 rounded border border-ink p-4'>
-          <h2 className='mb-3 text-xl font-bold'>Souvent achetés ensemble</h2>
-          <div className='flex gap-2 overflow-x-auto pb-2'>
+          <h2 className='mb-1 text-xl font-bold'>{hasUpsell ? 'Complétez votre achat' : 'Souvent achetés ensemble'}</h2>
+          {hasUpsell && <p className='mb-3 text-sm text-graphite'>Des articles qui vont bien avec ce produit.</p>}
+          <div className={'flex gap-2 overflow-x-auto pb-2 ' + (hasUpsell ? '' : 'mt-2')}>
             {bundle.map((b, k) => (
               <label key={b.id} className='flex w-36 flex-none cursor-pointer flex-col gap-1 text-xs'>
                 <span className='relative grid aspect-square place-items-center overflow-hidden bg-soft text-neutral-400'><Thumb p={b} /><input type='checkbox' className='absolute left-2 top-2 h-5 w-5 accent-black' checked={picked.includes(b.id)} disabled={k === 0} onChange={(e) => setPicked(e.target.checked ? [...picked, b.id] : picked.filter((x) => x !== b.id))} aria-label={b.name} /></span>
                 <span className='line-clamp-2'>{k === 0 ? 'Cet article : ' : ''}{b.name}</span>
                 <b>{formatMoney(b.price, currency)}</b>
+                {k > 0 && <Link href={'/products/' + b.id} className='underline'>Voir le produit</Link>}
               </label>
             ))}
           </div>

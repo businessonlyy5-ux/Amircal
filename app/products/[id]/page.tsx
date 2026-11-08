@@ -5,6 +5,7 @@ import TestimonialCarousel from '@/components/TestimonialCarousel';
 import { getCategories } from '@/lib/categories';
 import { getProduct, related } from '@/lib/products';
 import { getTestimonials } from '@/lib/testimonials';
+import { complements } from '@/lib/upsell';
 
 export const revalidate = 300;
 type Props = { params: Promise<{ id: string }> };
@@ -19,10 +20,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function Page({ params }: Props) {
   const p = await getProduct(Number((await params).id));
   if (!p) notFound();
-  const [rel, cats] = await Promise.all([related(p, 8), getCategories()]);
+  const [rel, cats, up] = await Promise.all([related(p, 8), getCategories(), complements(p, 3)]);
   const slug = cats.find((c) => c.name === p.category)?.slug;
   const reviews = await getTestimonials(p.id, slug);
   const summary = reviews.length ? { avg: Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10, count: reviews.length } : undefined;
   // key : repart de zéro (image, quantité, variante choisie) quand on passe d’un produit à un autre.
-  return <ProductDetail key={p.id} p={p} related={rel} summary={summary} reviews={reviews.length ? <TestimonialCarousel items={reviews} /> : undefined} />;
+  return <ProductDetail key={p.id} p={p} related={rel} upsell={up} summary={summary} reviews={reviews.length ? <TestimonialCarousel items={reviews} /> : undefined} />;
 }
