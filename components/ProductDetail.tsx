@@ -92,6 +92,7 @@ export default function ProductDetail({ p, related, upsell, reviews, summary }: 
         <div>
           <div className='relative grid aspect-square place-items-center overflow-hidden border border-neutral-200 bg-soft text-neutral-400'>
             {imgs.length ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={imgs[Math.min(img, imgs.length - 1)]} alt={p.name} className='h-full w-full object-contain' />) : <BoxIcon className='h-1/3 w-1/3' />}
+            {p.discount > 0 && <span className='absolute left-3 top-3 rounded-sm bg-ink px-2 py-1 text-xs font-bold text-paper'>-{p.discount}%</span>}
           </div>
           {imgs.length > 1 && (
             <div className='mt-2 flex gap-2 overflow-x-auto'>
@@ -109,7 +110,8 @@ export default function ProductDetail({ p, related, upsell, reviews, summary }: 
           <p className='text-xs font-semibold uppercase tracking-widest text-neutral-500'>{p.category}</p>
           <h1 className='mb-2 text-2xl font-extrabold leading-tight md:text-3xl'>{p.name}</h1>
           <p className='text-sm text-graphite'>{summary ? <><span aria-label={summary.avg + ' sur 5'} className='text-gold-deep'>{'★'.repeat(Math.round(summary.avg))}{'☆'.repeat(5 - Math.round(summary.avg))}</span> {summary.avg} · {summary.count} avis</> : 'Aucun avis pour le moment'}</p>
-          <p className='mt-3 text-3xl font-extrabold'>{formatMoney(p.price, currency)}</p>
+          <p className='mt-3 text-3xl font-extrabold'>{formatMoney(p.price, currency)}{p.compareAt > 0 && <s className='ml-2 text-base font-normal text-neutral-500'>{formatMoney(p.compareAt, currency)}</s>}</p>
+          {p.compareAt > 0 && <p className='text-sm font-semibold'>Vous économisez {formatMoney(p.compareAt - p.price, currency)} ({p.discount} %)</p>}
 
           {real && Object.entries(groups).map(([k, values]) => (
             <div key={k} className='mt-4'>
@@ -203,7 +205,7 @@ export default function ProductDetail({ p, related, upsell, reviews, summary }: 
       )}
 
       <div className='fixed inset-x-0 bottom-14 z-30 flex items-center gap-3 border-t border-ink bg-paper px-4 py-2 md:hidden'>
-        <div className='min-w-0 flex-1'><p className='truncate text-xs'>{p.name}</p><b>{formatMoney(p.price * qty, currency)}</b></div>
+        <div className='min-w-0 flex-1'><p className='truncate text-xs'>{p.name}</p><b>{formatMoney(p.price * qty, currency)}</b>{p.compareAt > 0 && <s className='ml-1.5 text-xs text-neutral-500'>{formatMoney(p.compareAt * qty, currency)}</s>}</div>
         <button disabled={out} onClick={buy} className='h-11 rounded bg-ink px-5 font-bold text-paper disabled:bg-neutral-300'>{out ? 'Indisponible' : 'Ajouter'}</button>
       </div>
     </main>
