@@ -75,7 +75,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: SP 
       <div>
         <h2 className='mb-2 font-bold'>Trier par</h2>
         <select name='sort' defaultValue={sort} className='w-full rounded border border-ink bg-paper p-2'>
-          <option value='rel'>Nouveautés</option><option value='asc'>Prix croissant</option><option value='desc'>Prix décroissant</option>
+          <option value='rel'>Notre sélection</option><option value='new'>Nouveautés</option><option value='asc'>Prix croissant</option><option value='desc'>Prix décroissant</option>
         </select>
       </div>
       <button className='w-full rounded bg-ink py-2.5 font-bold text-paper'>Appliquer</button>
