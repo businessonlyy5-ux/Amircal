@@ -7,7 +7,7 @@ import { BoxIcon } from '@/components/Icons';
 import { getCategories, type Cat } from '@/lib/categories';
 import { getCollections } from '@/lib/collections';
 import { heroSlides } from '@/lib/hero';
-import { listProducts } from '@/lib/products';
+import { listProducts, trending } from '@/lib/products';
 
 export const revalidate = 300;
 
@@ -17,16 +17,19 @@ export default async function Home() {
   const heroCats: Cat[] = ['maison-cuisine', 'electronique', 'beaute-soins'].flatMap((s) => cats.filter((c) => c.slug === s));
   const heroPick = heroCats.length ? heroCats : cats.slice(0, 3);
   const custom = heroSlides(); // bannières déposées dans public/hero/
-  const [latest, grid, heroLists, ...rows] = await Promise.all([
-    listProducts({ per: 12 }),
-    listProducts({ per: 10, page: 2 }),
+  // Tendances et « À découvrir » : sélection faite à la main (rangs 1 à 12, puis 13 à 22). Chaque rangée de catégorie suit l’ordre de la sélection de la catégorie.
+  const [hot, discover, heroLists, ...rows] = await Promise.all([
+    trending(1, 12),
+    trending(13, 22),
     custom.length ? Promise.resolve([]) : Promise.all(heroPick.map((c) => listProducts({ cat: c.slug, per: 3 }))),
     ...rowCats.map((c) => listProducts({ cat: c.slug, per: 8 })),
   ]);
+  const hotItems = hot.length ? hot : (await listProducts({ per: 12 })).items; // repli si aucune sélection n’est définie
+  const gridItems = discover.length ? discover : (await listProducts({ per: 10, page: 2 })).items;
   const imgs = (items: { image?: string }[]) => items.map((p) => p.image).filter((u): u is string => !!u);
   const slides: Slide[] = custom.length ? custom : [
     ...heroPick.map((c, i) => ({ cat: c, images: imgs(heroLists[i].items) })),
-    { images: imgs(latest.items).slice(0, 3) },
+    { images: imgs(hotItems).slice(0, 3) },
   ];
   return (
     <main>
@@ -44,7 +47,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {latest.items.length > 0 && <ProductRow title='Nouveautés' products={latest.items} />}
+      {hotItems.length > 0 && <ProductRow title='Tendances' products={hotItems} />}
 
       {collections.length > 0 && (
         <section className='mx-auto max-w-7xl px-4 py-6'>
@@ -64,10 +67,10 @@ export default async function Home() {
       )}
 
       {rows.map((r, i) => r.items.length > 0 && <ProductRow key={rowCats[i].slug} title={<CatName c={rowCats[i]} />} products={r.items} band={i % 2 === 1} href={'/products?cat=' + rowCats[i].slug} />)}
-      {grid.items.length > 0 && (
+      {gridItems.length > 0 && (
         <section className='mx-auto max-w-7xl px-4 py-6'>
           <h2 className='mb-3 text-xl font-bold'>À découvrir</h2>
-          <div className='grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-5'>{grid.items.map((p) => (<ProductCard key={p.id} p={p} />))}</div>
+          <div className='grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-5'>{gridItems.map((p) => (<ProductCard key={p.id} p={p} />))}</div>
           <Link href='/products' className='mx-auto mt-5 block w-fit rounded border-2 border-ink px-8 py-3 font-bold hover:bg-ink hover:text-paper'>Voir tous les produits</Link>
         </section>
       )}
