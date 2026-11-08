@@ -28,10 +28,10 @@ function Thumb({ p, className = 'h-1/3 w-1/3' }: { p: Product; className?: strin
   return p.image ? <img src={p.image} alt={p.name} loading='lazy' className='h-full w-full object-contain' /> : <BoxIcon className={className} />;
 }
 
-// reviews : carrousel d’avis (serveur) ; summary : moyenne et nombre d’avis publiés pour ce produit ;
+// reviews : carrousel d’avis (serveur) ; summary : moyenne et nombre d’avis publiés pour ce produit (sample : avis d’exemple) ;
 // upsell : articles qui complètent ce produit (ex. oreiller -> masque de sommeil), choisis côté serveur ;
 // beforeAfter : photos avant / après déposées dans public/avant-apres (affichées seulement si les deux existent).
-export default function ProductDetail({ p, related, upsell, beforeAfter, reviews, summary }: { p: Product; related: Product[]; upsell?: Product[]; beforeAfter?: { before: string; after: string } | null; reviews?: React.ReactNode; summary?: { avg: number; count: number } }) {
+export default function ProductDetail({ p, related, upsell, beforeAfter, reviews, summary }: { p: Product; related: Product[]; upsell?: Product[]; beforeAfter?: { before: string; after: string } | null; reviews?: React.ReactNode; summary?: { avg: number; count: number; sample?: boolean } }) {
   const router = useRouter();
   const { currency, add, cart } = useStore();
   const real = !!p.image; // produits Zendrop : variantes réelles ; sans image = produit de démonstration (couleurs/tailles fictives)
@@ -117,7 +117,7 @@ export default function ProductDetail({ p, related, upsell, beforeAfter, reviews
         <div className='md:sticky md:top-32 md:self-start'>
           <p className='text-xs font-semibold uppercase tracking-widest text-neutral-500'>{p.category}</p>
           <h1 className='mb-2 text-2xl font-extrabold leading-tight md:text-3xl'>{p.name}</h1>
-          <p className='text-sm text-graphite'>{summary ? <><span aria-label={summary.avg + ' sur 5'} className='text-gold-deep'>{'★'.repeat(Math.round(summary.avg))}{'☆'.repeat(5 - Math.round(summary.avg))}</span> {summary.avg} · {summary.count} avis</> : 'Aucun avis pour le moment'}</p>
+          <p className='text-sm text-graphite'>{summary ? <><span aria-label={summary.avg + ' sur 5'} className='text-gold-deep'>{'★'.repeat(Math.round(summary.avg))}{'☆'.repeat(5 - Math.round(summary.avg))}</span> {summary.avg} · {summary.count} avis{summary.sample ? ' d’exemple' : ''}</> : 'Aucun avis pour le moment'}</p>
           <p className='mt-3 text-3xl font-extrabold'>{formatMoney(p.price, currency)}{p.compareAt > 0 && <s className='ml-2 text-base font-normal text-neutral-500'>{formatMoney(p.compareAt, currency)}</s>}</p>
           {p.compareAt > 0 && <p className='text-sm font-semibold'>Vous économisez {formatMoney(p.compareAt - p.price, currency)} ({p.discount} %)</p>}
 
