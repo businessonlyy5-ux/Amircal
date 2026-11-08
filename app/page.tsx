@@ -7,6 +7,7 @@ import { BoxIcon } from '@/components/Icons';
 import { getCategories, type Cat } from '@/lib/categories';
 import { getCollections } from '@/lib/collections';
 import { heroSlides } from '@/lib/hero';
+import { categoryPhotos, collectionPhotos } from '@/lib/local-images';
 import { listProducts, trending } from '@/lib/products';
 
 export const revalidate = 300;
@@ -19,6 +20,8 @@ export default async function Home() {
   const heroCats: Cat[] = ['maison-cuisine', 'sports-plein-air', 'beaute-soins'].flatMap((s) => cats.filter((c) => c.slug === s));
   const heroPick = heroCats.length ? heroCats : cats.slice(0, 3);
   const custom = heroSlides(); // bannières déposées dans public/hero/
+  const catPhotos = categoryPhotos(); // photos déposées dans public/categories/
+  const colPhotos = collectionPhotos(); // photos déposées dans public/collections/
   // Tendances et « À découvrir » : sélection faite à la main (rangs 1 à 12, puis 13 à 22). Chaque rangée de catégorie suit l’ordre de la sélection de la catégorie.
   const [hot, discover, heroLists, ...rows] = await Promise.all([
     trending(1, 12),
@@ -38,14 +41,19 @@ export default async function Home() {
       <HeroCarousel slides={slides} />
       <section className='mx-auto max-w-7xl px-4 py-6'>
         <div className='flex gap-4 overflow-x-auto pb-2'>
-          {cats.map((c) => (
-            <Link key={c.slug} href={'/products?cat=' + c.slug} className='w-20 flex-none text-center text-xs font-medium md:w-28 md:text-[13px]'>
-              <span className='mb-2 grid aspect-square place-items-center overflow-hidden rounded-full border border-neutral-200 bg-white text-neutral-500'>
-                {c.image ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={c.image} alt='' loading='lazy' className='h-full w-full object-cover' />) : <BoxIcon className='h-1/3 w-1/3' />}
-              </span>
-              <CatName c={c} />
-            </Link>
-          ))}
+          {cats.map((c) => {
+            // Photo déposée = affichée telle quelle ; sinon photo produit : le fond blanc se fond dans le beige (mix-blend-multiply).
+            const photo = catPhotos[c.slug];
+            const src = photo ?? c.image;
+            return (
+              <Link key={c.slug} href={'/products?cat=' + c.slug} className='w-20 flex-none text-center text-xs font-medium md:w-28 md:text-[13px]'>
+                <span className='mb-2 grid aspect-square place-items-center overflow-hidden rounded-full border border-neutral-200 bg-[#f3ecdf] text-neutral-500'>
+                  {src ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={src} alt='' loading='lazy' className={photo ? 'h-full w-full object-cover' : 'h-full w-full object-contain p-2 mix-blend-multiply'} />) : <BoxIcon className='h-1/3 w-1/3' />}
+                </span>
+                <CatName c={c} />
+              </Link>
+            );
+          })}
         </div>
       </section>
 
@@ -55,15 +63,19 @@ export default async function Home() {
         <section className='mx-auto max-w-7xl px-4 py-6'>
           <h2 className='mb-3 text-xl font-bold'>Collections</h2>
           <div className='flex gap-3 overflow-x-auto pb-2 md:grid md:grid-cols-4 md:gap-4 md:overflow-visible'>
-            {collections.slice(0, 4).map((c) => (
-              <Link key={c.slug} href={'/products?col=' + c.slug} className='group w-40 flex-none md:w-auto'>
-                <span className='grid aspect-square place-items-center overflow-hidden rounded-lg border border-neutral-200 bg-white'>
-                  {c.image ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={c.image} alt='' loading='lazy' className='h-full w-full object-contain p-3 transition-transform group-hover:scale-105' />) : <BoxIcon className='h-1/4 w-1/4 text-neutral-400' />}
-                </span>
-                <span className='mt-2 block font-bold leading-tight'><CatName c={c} /></span>
-                {c.description && <span className='block text-xs text-graphite'>{c.description}</span>}
-              </Link>
-            ))}
+            {collections.slice(0, 4).map((c) => {
+              const photo = colPhotos[c.slug];
+              const src = photo ?? c.image;
+              return (
+                <Link key={c.slug} href={'/products?col=' + c.slug} className='group w-40 flex-none md:w-auto'>
+                  <span className='grid aspect-square place-items-center overflow-hidden rounded-lg border border-neutral-200 bg-[#f3ecdf]'>
+                    {src ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={src} alt='' loading='lazy' className={'h-full w-full transition-transform group-hover:scale-105 ' + (photo ? 'object-cover' : 'object-contain p-3 mix-blend-multiply')} />) : <BoxIcon className='h-1/4 w-1/4 text-neutral-400' />}
+                  </span>
+                  <span className='mt-2 block font-bold leading-tight'><CatName c={c} /></span>
+                  {c.description && <span className='block text-xs text-graphite'>{c.description}</span>}
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}
