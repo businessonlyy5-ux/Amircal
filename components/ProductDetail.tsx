@@ -3,9 +3,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { formatMoney, VARIANTS, type Product } from '@/lib/data';
+import { parseDescription } from '@/lib/details';
 import { useStore } from './Store';
 import { useProductsByIds } from './useProducts';
 import { BoxIcon } from './Icons';
+import BeforeAfter from './BeforeAfter';
 import ProductCard from './ProductCard';
 
 const PERKS = [
@@ -27,8 +29,9 @@ function Thumb({ p, className = 'h-1/3 w-1/3' }: { p: Product; className?: strin
 }
 
 // reviews : carrousel d’avis (serveur) ; summary : moyenne et nombre d’avis publiés pour ce produit ;
-// upsell : articles qui complètent ce produit (ex. oreiller -> masque de sommeil), choisis côté serveur.
-export default function ProductDetail({ p, related, upsell, reviews, summary }: { p: Product; related: Product[]; upsell?: Product[]; reviews?: React.ReactNode; summary?: { avg: number; count: number } }) {
+// upsell : articles qui complètent ce produit (ex. oreiller -> masque de sommeil), choisis côté serveur ;
+// beforeAfter : photos avant / après déposées dans public/avant-apres (affichées seulement si les deux existent).
+export default function ProductDetail({ p, related, upsell, beforeAfter, reviews, summary }: { p: Product; related: Product[]; upsell?: Product[]; beforeAfter?: { before: string; after: string } | null; reviews?: React.ReactNode; summary?: { avg: number; count: number } }) {
   const router = useRouter();
   const { currency, add, cart } = useStore();
   const real = !!p.image; // produits Zendrop : variantes réelles ; sans image = produit de démonstration (couleurs/tailles fictives)
@@ -38,6 +41,11 @@ export default function ProductDetail({ p, related, upsell, reviews, summary }: 
   const [size, setSize] = useState(VARIANTS.Taille[1]);
   const [qty, setQty] = useState(1);
   const [seenIds, setSeenIds] = useState<number[]>([]);
+
+  // Description du fournisseur mise en forme : points forts, paragraphes, mode d’emploi, ingrédients.
+  const parsed = useMemo(() => parseDescription(p.description, p.name), [p.description, p.name]);
+  const paras = parsed.paragraphs.length ? parsed.paragraphs : p.description && p.description !== p.name && !parsed.points.length ? [p.description] : [];
+  const detailCards = parsed.points.filter((x) => x.text);
 
   // Variantes Zendrop réelles : un groupe de choix par option (Couleur, Taille…).
   const vs = useMemo(() => p.variants ?? [], [p.variants]);
@@ -111,7 +119,13 @@ export default function ProductDetail({ p, related, upsell, reviews, summary }: 
           <h1 className='mb-2 text-2xl font-extrabold leading-tight md:text-3xl'>{p.name}</h1>
           <p className='text-sm text-graphite'>{summary ? <><span aria-label={summary.avg + ' sur 5'} className='text-gold-deep'>{'★'.repeat(Math.round(summary.avg))}{'☆'.repeat(5 - Math.round(summary.avg))}</span> {summary.avg} · {summary.count} avis</> : 'Aucun avis pour le moment'}</p>
           <p className='mt-3 text-3xl font-extrabold'>{formatMoney(p.price, currency)}{p.compareAt > 0 && <s className='ml-2 text-base font-normal text-neutral-500'>{formatMoney(p.compareAt, currency)}</s>}</p>
-          {p.compareAt > 0 && <p className='text-sm font-semibold'>Vous économisez {formatMoney(p.compareAt - p.price, currency)} ({p.discount} %)</p>}
+          {p.compareAt > 0 && <p className='text-sm font-semibold'>Vous économisez {formatMoney(p.compareAt - p.price, currency)} ({p.discount} %)</p>}
+
+          {parsed.points.length > 0 && (
+            <ul className='mt-3 space-y-1.5 text-sm'>
+              {parsed.points.slice(0, 3).map((x, i) => (<li key={i} className='flex gap-2'><span aria-hidden className='font-bold'>✓</span><span>{x.title.length > 80 ? x.title.slice(0, 77) + '…' : x.title}</span></li>))}
+            </ul>
+          )}
 
           {real && Object.entries(groups).map(([k, values]) => (
             <div key={k} className='mt-4'>
@@ -145,6 +159,25 @@ export default function ProductDetail({ p, related, upsell, reviews, summary }: 
         </div>
       </div>
 
+      {beforeAfter && (
+        <section className='mt-10 rounded-lg bg-soft p-4 md:p-8'>
+          <div className='grid gap-6 md:grid-cols-2 md:items-center md:gap-10'>
+            <BeforeAfter before={beforeAfter.before} after={beforeAfter.after} alt={p.name} />
+            <div>
+              <h2 className='text-2xl font-extrabold md:text-3xl'>Avant / Après</h2>
+              <p className='mt-1 text-sm text-graphite'>Faites glisser le curseur pour comparer.</p>
+              {parsed.points.length > 0 && (
+                <ul className='mt-4 space-y-2'>
+                  {parsed.points.slice(0, 3).map((x, i) => (<li key={i} className='flex gap-2 font-medium'><span aria-hidden className='font-bold'>✓</span><span>{x.title.length > 90 ? x.title.slice(0, 87) + '…' : x.title}</span></li>))}
+                </ul>
+              )}
+              <p className='mt-4 text-xs text-neutral-600'>Photos fournies à titre d’illustration. Les résultats varient d’une personne à l’autre.</p>
+              <button disabled={out} onClick={buy} className='mt-4 h-12 rounded bg-ink px-8 font-bold text-paper hover:bg-graphite disabled:bg-neutral-300'>Ajouter au panier</button>
+            </div>
+          </div>
+        </section>
+      )}
+
       {bundle.length > 1 && (
         <section className='mt-10 rounded border border-ink p-4'>
           <h2 className='mb-1 text-xl font-bold'>{hasUpsell ? 'Complétez votre achat' : 'Souvent achetés ensemble'}</h2>
@@ -173,8 +206,29 @@ export default function ProductDetail({ p, related, upsell, reviews, summary }: 
             {['Commandez en USD ou en HTG', 'Suivi de colis disponible dans votre compte', 'Paiement sécurisé par un prestataire externe', 'Livraison vers les États-Unis et Haïti'].map((t) => (<li key={t} className='flex gap-2'><span aria-hidden>✓</span>{t}</li>))}
           </ul>
         </div>
-        <div className='rounded border border-neutral-200 p-4 text-sm leading-relaxed'><b>Description</b><p className='mt-1 whitespace-pre-line'>{p.description && p.description !== p.name ? p.description : 'La description détaillée de ce produit sera ajoutée prochainement.'}</p></div>
+        <div className='rounded border border-neutral-200 p-4 text-sm leading-relaxed'>
+          <b>Description</b>
+          {paras.length ? paras.map((t, i) => (<p key={i} className='mt-2'>{t}</p>)) : parsed.points.length ? null : <p className='mt-1'>La description détaillée de ce produit sera ajoutée prochainement.</p>}
+          {!paras.length && parsed.points.length > 0 && <p className='mt-1'>Voir les détails du produit ci-dessous.</p>}
+        </div>
       </section>
+
+      {(detailCards.length > 0 || parsed.how || parsed.ingredients) && (
+        <section className='mt-10'>
+          <h2 className='mb-3 text-xl font-bold'>Détails du produit</h2>
+          {detailCards.length > 0 && (
+            <div className='grid gap-3 sm:grid-cols-2'>
+              {detailCards.map((x, i) => (<div key={i} className='rounded border border-neutral-200 p-3 text-sm'><b className='block'>{x.title}</b><p className='mt-1 text-graphite'>{x.text}</p></div>))}
+            </div>
+          )}
+          {parsed.how && (
+            <details className='group mt-3 border-y border-neutral-200 py-3'><summary className='flex cursor-pointer list-none items-center justify-between font-medium'>Comment l’utiliser<span className='text-xl group-open:rotate-45'>+</span></summary><p className='mt-2 text-sm text-graphite'>{parsed.how}</p></details>
+          )}
+          {parsed.ingredients && (
+            <details className='group border-b border-neutral-200 py-3'><summary className='flex cursor-pointer list-none items-center justify-between font-medium'>Ingrédients<span className='text-xl group-open:rotate-45'>+</span></summary><p className='mt-2 text-sm text-graphite'>{parsed.ingredients}</p></details>
+          )}
+        </section>
+      )}
 
       <section className='mt-10'>
         <h2 className='mb-3 text-xl font-bold'>Questions fréquentes</h2>
