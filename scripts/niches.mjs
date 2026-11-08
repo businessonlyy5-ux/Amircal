@@ -1,7 +1,10 @@
 // Catégorie du site -> requêtes dans le catalogue Zendrop.
 // cat = id de catégorie Zendrop, kw = mot-clé, include/exclude = filtres sur le titre.
 // Toutes les requêtes sont limitées aux entrepôts US (ships_from: 'US').
-// Les noms de catégories doivent être identiques à CATEGORIES dans lib/data.ts.
+// Les clés doivent être identiques aux noms de la table categories de Supabase (ex. « Maison », « Sports »).
+// Cinq couples de catégories ont une seule clé d’import : Maison (puis Cuisine), Enfants (puis Bébé), Beauté (puis Soins),
+// Sports (puis Plein air), Jouets (puis Jeux). Un déclencheur Supabase (assign_subcategory) place chaque produit importé
+// dans la bonne catégorie du couple d’après son titre et les sous-catégories ; sans correspondance, il reste dans la catégorie d’import.
 const MEN = { include: /\bmen(’|')?s?\b/i, exclude: /\bwom[ae]n|\bgirls?\b|\bladies\b/i };
 const WOMEN = { include: /\bwom[ae]n|\bladies\b|\bgirls?\b/i };
 
@@ -16,7 +19,7 @@ const DIY = /\b(tools?|drill|screwdriver|wrench|hammer|pliers?|saw|toolbox|tape 
 
 export const NICHES = {
   'Électronique': [{ cat: 106 }, { cat: 6 }],
-  'Maison & Cuisine': [{ cat: 11 }, { cat: 171 }, { cat: 180 }, { cat: 14 }],
+  'Maison': [{ cat: 11 }, { cat: 171 }, { cat: 180 }, { cat: 14 }],
   'Mode homme': [
     { cat: 16, kw: "men's", ...MEN },
     { cat: 23, kw: "men's", ...MEN },
@@ -32,19 +35,19 @@ export const NICHES = {
     { cat: 15, kw: "women's", ...WOMEN },
     ...byKeywords(["women's dress", "women's shoes", "women's bag", "women's necklace", "women's top"], WOMEN.include),
   ],
-  'Enfants & Bébé': [
+  'Enfants': [
     { cat: 67 },
     { cat: 61, kw: 'kids' },
     { cat: 187, kw: 'kids' },
     ...byKeywords(['baby', 'toddler', 'kids', 'infant'], /\b(baby|babies|toddlers?|kids?|infants?|children|child)\b/i),
   ],
-  'Beauté & Soins': [{ cat: 165 }, { cat: 4 }],
+  'Beauté': [{ cat: 165 }, { cat: 4 }],
   'Auto': [{ cat: 260 }, ...byKeywords(['car', 'truck', 'motorcycle', 'auto', 'vehicle'], AUTO)],
-  'Sports & Plein air': [
+  'Sports': [
     { cat: 252 }, { cat: 5 }, { cat: 24 },
     ...byKeywords(['fitness', 'yoga', 'gym', 'camping', 'hiking', 'fishing', 'golf', 'bike', 'running', 'workout'], SPORT),
   ],
-  'Jouets & Jeux': [
+  'Jouets': [
     { cat: 255 },
     ...byKeywords(['toy', 'puzzle', 'game', 'plush', 'doll', 'building blocks', 'board game'], TOYS),
   ],
