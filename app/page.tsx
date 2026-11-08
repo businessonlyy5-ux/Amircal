@@ -13,8 +13,10 @@ export const revalidate = 300;
 
 export default async function Home() {
   const [cats, collections] = await Promise.all([getCategories(), getCollections()]);
-  const rowCats = cats.slice(0, 6);
-  const heroCats: Cat[] = ['maison-cuisine', 'electronique', 'beaute-soins'].flatMap((s) => cats.filter((c) => c.slug === s));
+  // Rangées de catégories de l’accueil : les 6 premières catégories, avec Sports & Plein air à la place d’Électronique.
+  const sports = cats.find((c) => c.slug === 'sports-plein-air');
+  const rowCats = cats.slice(0, 6).map((c) => (c.slug === 'electronique' && sports ? sports : c));
+  const heroCats: Cat[] = ['maison-cuisine', 'sports-plein-air', 'beaute-soins'].flatMap((s) => cats.filter((c) => c.slug === s));
   const heroPick = heroCats.length ? heroCats : cats.slice(0, 3);
   const custom = heroSlides(); // bannières déposées dans public/hero/
   // Tendances et « À découvrir » : sélection faite à la main (rangs 1 à 12, puis 13 à 22). Chaque rangée de catégorie suit l’ordre de la sélection de la catégorie.
