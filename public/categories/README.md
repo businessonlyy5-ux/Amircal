@@ -5,14 +5,19 @@ Déposez ici une photo par catégorie. **Le nom du fichier est le slug de la cat
 | Catégorie | Fichier |
 |---|---|
 | Électronique | `electronique.jpg` |
-| Maison & Cuisine | `maison-cuisine.jpg` |
+| Maison | `maison.jpg` |
+| Cuisine | `cuisine.jpg` |
 | Mode homme | `mode-homme.jpg` |
 | Mode femme | `mode-femme.jpg` |
-| Enfants & Bébé | `enfants-bebe.jpg` |
-| Beauté & Soins | `beaute-soins.jpg` |
+| Enfants | `enfants.jpg` |
+| Bébé | `bebe.jpg` |
+| Beauté | `beaute.jpg` |
+| Soins | `soins.jpg` |
 | Auto | `auto.jpg` |
-| Sports & Plein air | `sports-plein-air.jpg` |
-| Jouets & Jeux | `jouets-jeux.jpg` |
+| Sports | `sports.jpg` |
+| Plein air | `plein-air.jpg` |
+| Jouets | `jouets.jpg` |
+| Jeux | `jeux.jpg` |
 | Animaux | `animaux.jpg` |
 | Voyage | `voyage.jpg` |
 | Bureau | `bureau.jpg` |

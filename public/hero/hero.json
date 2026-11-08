@@ -1,6 +1,6 @@
 [
   { "href": "/products?cat=electronique", "alt": "Electronique" },
-  { "href": "/products?cat=maison-cuisine", "alt": "Maison et cuisine" },
-  { "href": "/products?cat=beaute-soins", "alt": "Beaute et soins" },
+  { "href": "/products?cat=maison", "alt": "Maison" },
+  { "href": "/products?cat=beaute", "alt": "Beaute" },
   { "href": "/products", "alt": "Tout le catalogue" }
 ]
