@@ -28,7 +28,7 @@ export const getSale = cache(async (): Promise<SaleCfg | null> => {
 });
 
 // Titres fournisseurs : on retire les parenthèses de spécifications techniques (« (as1, alpha, one_size, …) »),
-// un fragment de parenthèse coupé en fin de titre et la ponctuation orpheline. Le titre en base n’est pas modifié.
+// un fragment de parenthèse coupé en fin de titre et la ponctuation orpheline. Le titre en base n'est pas modifié.
 const tidy = (t: string) => t
   .replace(/\s*\((?:[^()]*,){2,}[^()]*\)/g, '')
   .replace(/\s*\([^)]*$/, '')
@@ -84,6 +84,7 @@ async function subcategoryId(catId: string, slug: string) {
 }
 
 // cat : une catégorie ; sub : une sous-catégorie de cette catégorie ; cats : plusieurs catégories (collections). Prix min/max en USD (prix habituel).
+// sort : « rel » (défaut) = notre sélection (produits choisis d’abord, puis meilleure fiche) ; « new » = nouveautés ; « asc » / « desc » = prix.
 export type ListOpts = { q?: string; cat?: string; sub?: string; cats?: string[]; min?: number; max?: number; sort?: string; page?: number; per?: number };
 export type ListResult = { items: Product[]; total: number; pages: number; page: number };
 
@@ -105,12 +106,24 @@ export async function listProducts(o: ListOpts): Promise<ListResult> {
   if (term) f = f.ilike('title', '%' + term + '%');
   if (o.min && o.min > 0) f = f.gte('sell_price_usd', o.min);
   if (o.max && o.max > 0) f = f.lte('sell_price_usd', o.max);
-  const sorted = o.sort === 'asc' ? f.order('sell_price_usd', { ascending: true }) : o.sort === 'desc' ? f.order('sell_price_usd', { ascending: false }) : f.order('created_at', { ascending: false });
+  const sorted = o.sort === 'asc' ? f.order('sell_price_usd', { ascending: true })
+    : o.sort === 'desc' ? f.order('sell_price_usd', { ascending: false })
+    : o.sort === 'new' ? f.order('created_at', { ascending: false })
+    : f.order('featured_rank', { ascending: true, nullsFirst: false }).order('sort_score', { ascending: false });
   const from = (page - 1) * per;
   const [{ data, count, error }, sale] = await Promise.all([sorted.order('id').range(from, from + per - 1), getSale()]);
   if (error) return empty;
   const total = count ?? 0;
   return { items: ((data ?? []) as unknown as Row[]).map((r) => toProduct(r, !!sale)).filter(valid), total, pages: Math.max(1, Math.ceil(total / per)), page };
+}
+
+// Produits tendance de la page d’accueil : choisis à la main (colonne trending_rank), dans l’ordre. from–to = plage de rangs.
+export async function trending(from = 1, to = 12): Promise<Product[]> {
+  const [{ data }, sale] = await Promise.all([
+    sbPublic().from('products').select(SEL).eq('is_active', true).not('supplier_product_id', 'is', null).gte('trending_rank', from).lte('trending_rank', to).order('trending_rank'),
+    getSale(),
+  ]);
+  return ((data ?? []) as unknown as Row[]).map((r) => toProduct(r, !!sale)).filter(valid);
 }
 
 export const getProduct = cache(async (id: number): Promise<Product | null> => {
