@@ -2,13 +2,17 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { formatMoney, shippingFor, type Currency, type Product } from '@/lib/data';
+import { bestDiscount, type Applied } from '@/lib/discounts';
 import { useStore } from '@/components/Store';
 import { useProductsByIds } from '@/components/useProducts';
+import { usePromo } from '@/components/usePromo';
+import PromoBox from '@/components/PromoBox';
 import { BoxIcon } from '@/components/Icons';
 
 type Line = { id: number; qty: number; variant: string; p: Product };
 
-function Summary({ lines, sub, ship, currency }: { lines: Line[]; sub: number; ship: number; currency: Currency }) {
+function Summary({ lines, sub, disc, ship, currency }: { lines: Line[]; sub: number; disc: Applied; ship: number; currency: Currency }) {
+  const total = sub - disc.amount + ship;
   return (
     <div className='text-sm'>
       <ul className='divide-y divide-neutral-200'>
@@ -25,8 +29,9 @@ function Summary({ lines, sub, ship, currency }: { lines: Line[]; sub: number; s
       </ul>
       <dl className='mt-3 space-y-1.5 border-t border-neutral-300 pt-3'>
         <div className='flex justify-between'><dt>Sous-total</dt><dd>{formatMoney(sub, currency)}</dd></div>
+        {disc.amount > 0 && <div className='flex justify-between font-semibold'><dt>{disc.kind === 'promo' ? 'Code ' + disc.code : 'Remise quantité (−' + disc.pct + ' %)'}</dt><dd>−{formatMoney(disc.amount, currency)}</dd></div>}
         <div className='flex justify-between'><dt>Livraison</dt><dd>{ship === 0 ? 'Offerte' : formatMoney(ship, currency)}</dd></div>
-        <div className='flex justify-between border-t border-neutral-300 pt-2 text-base font-bold'><dt>Total</dt><dd>{formatMoney(sub + ship, currency)}</dd></div>
+        <div className='flex justify-between border-t border-neutral-300 pt-2 text-base font-bold'><dt>Total</dt><dd>{formatMoney(total, currency)}</dd></div>
       </dl>
     </div>
   );
@@ -35,11 +40,14 @@ function Summary({ lines, sub, ship, currency }: { lines: Line[]; sub: number; s
 export default function CheckoutPage() {
   const { cart, currency, setCurrency } = useStore();
   const { get, loading } = useProductsByIds(cart.map((l) => l.id));
+  const { promo, apply, clear } = usePromo();
   const [done, setDone] = useState(false);
   const lines: Line[] = cart.flatMap((l) => { const p = get(l.id); return p ? [{ ...l, p }] : []; });
   const sub = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
-  const ship = shippingFor(currency, sub);
-  const total = sub + ship;
+  const qtyTotal = lines.reduce((n, l) => n + l.qty, 0);
+  const disc = bestDiscount(sub, qtyTotal, promo);
+  const ship = shippingFor(currency, sub - disc.amount);
+  const total = sub - disc.amount + ship;
   const haiti = currency === 'HTG';
   const inp = 'mt-1 block w-full min-w-0 rounded border border-ink bg-paper px-3 py-3 text-base';
   const lab = 'block min-w-0 text-sm font-medium';
@@ -61,12 +69,15 @@ export default function CheckoutPage() {
     <main className='mx-auto max-w-5xl overflow-x-hidden px-4 pb-24 pt-5 md:pb-10'>
       <h1 className='mb-4 text-2xl font-bold'>Paiement</h1>
 
-      {/* Mobile : récapitulatif repliable en haut de page */}
+      {/* Mobile : récapitulatif repliable en haut de page, avec le champ code promo */}
       <details className='mb-5 rounded border border-gold bg-soft md:hidden'>
         <summary className='flex cursor-pointer list-none items-center justify-between gap-3 p-3 font-semibold'>
-          <span>Voir ma commande ({lines.reduce((n, l) => n + l.qty, 0)})</span><span>{formatMoney(total, currency)}</span>
+          <span>Voir ma commande ({qtyTotal})</span><span>{formatMoney(total, currency)}</span>
         </summary>
-        <div className='border-t border-neutral-300 bg-paper p-3'><Summary lines={lines} sub={sub} ship={ship} currency={currency} /></div>
+        <div className='border-t border-neutral-300 bg-paper p-3'>
+          <Summary lines={lines} sub={sub} disc={disc} ship={ship} currency={currency} />
+          <PromoBox promo={promo} apply={apply} clear={clear} />
+        </div>
       </details>
 
       <div className='grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_340px]'>
@@ -105,9 +116,10 @@ export default function CheckoutPage() {
           <button className='hidden h-12 w-full rounded bg-ink font-bold text-paper md:block'>Continuer · {formatMoney(total, currency)}</button>
         </form>
 
-        <aside className='hidden self-start rounded border border-gold p-4 md:sticky md:top-32 md:block'>
+        <aside className='hidden min-w-0 self-start rounded border border-gold p-4 md:sticky md:top-32 md:block'>
           <h2 className='mb-3 font-bold'>Votre commande</h2>
-          <Summary lines={lines} sub={sub} ship={ship} currency={currency} />
+          <Summary lines={lines} sub={sub} disc={disc} ship={ship} currency={currency} />
+          <PromoBox promo={promo} apply={apply} clear={clear} />
           <ul className='mt-4 space-y-1.5 text-xs text-neutral-600'>
             <li>✓ Suivi de colis inclus</li><li>✓ Aucune carte stockée sur AMIRCAL</li><li>✓ Commande possible sans compte</li>
           </ul>

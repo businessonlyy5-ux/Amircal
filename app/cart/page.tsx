@@ -2,8 +2,11 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { formatMoney, shippingFor, type Product } from '@/lib/data';
+import { bestDiscount, QTY_TIERS } from '@/lib/discounts';
 import { useStore } from '@/components/Store';
 import { useProductsByIds } from '@/components/useProducts';
+import { usePromo } from '@/components/usePromo';
+import PromoBox from '@/components/PromoBox';
 import { BoxIcon } from '@/components/Icons';
 import ProductCard from '@/components/ProductCard';
 
@@ -22,14 +25,20 @@ function Img({ p }: { p: Product }) {
 export default function CartPage() {
   const { cart, currency, setQty, remove } = useStore();
   const { get, loading } = useProductsByIds(cart.map((l) => l.id));
+  const { promo, apply, clear } = usePromo();
   const lines = cart.flatMap((l) => { const p = get(l.id); return p ? [{ ...l, p }] : []; });
   const sub = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
-  const ship = shippingFor(currency, sub);
+  const qtyTotal = lines.reduce((n, l) => n + l.qty, 0);
+  const disc = bestDiscount(sub, qtyTotal, promo);
+  const subAfter = sub - disc.amount;
+  const ship = shippingFor(currency, subAfter);
+  const total = subAfter + ship;
   const threshold = currency === 'USD' ? 50 : 100;
-  const left = Math.max(0, threshold - sub);
+  const left = Math.max(0, threshold - subAfter);
   const firstCat = lines[0]?.p.category;
   const inCart = new Set(lines.map((l) => l.id));
   const [sugg, setSugg] = useState<Product[]>([]);
+  const nextTier = [...QTY_TIERS].reverse().find((t) => qtyTotal < t.min);
 
   // Suggestions : articles qui font atteindre la livraison offerte, sinon articles de la même catégorie.
   useEffect(() => {
@@ -59,15 +68,15 @@ export default function CartPage() {
 
   return (
     <main className='mx-auto max-w-5xl px-4 pb-24 pt-6 md:pb-10'>
-      <h1 className='mb-4 text-2xl font-bold'>Panier ({lines.reduce((n, l) => n + l.qty, 0)})</h1>
+      <h1 className='mb-4 text-2xl font-bold'>Panier ({qtyTotal})</h1>
 
       <div className='mb-5 border border-ink bg-soft p-3 text-sm'>
         {left > 0 ? <>Plus que <b>{formatMoney(left, currency)}</b> pour profiter de la <b>livraison offerte</b></> : <b>Livraison offerte appliquée à votre commande</b>}
-        <div className='mt-2 h-2 w-full bg-neutral-300'><div className='h-full bg-ink transition-all' style={{ width: Math.min(100, (sub / threshold) * 100) + '%' }} /></div>
+        <div className='mt-2 h-2 w-full bg-neutral-300'><div className='h-full bg-ink transition-all' style={{ width: Math.min(100, (subAfter / threshold) * 100) + '%' }} /></div>
       </div>
 
-      <div className='grid gap-6 md:grid-cols-[1fr_340px]'>
-        <div>
+      <div className='grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_340px]'>
+        <div className='min-w-0'>
           {lines.map((l) => (
             <div key={l.id + l.variant} className='flex gap-3 border-b border-neutral-200 py-3'>
               <Link href={'/products/' + l.id} className='grid h-24 w-24 flex-none place-items-center overflow-hidden bg-soft text-neutral-400'><Img p={l.p} /></Link>
@@ -82,17 +91,23 @@ export default function CartPage() {
               </div>
             </div>
           ))}
+          <p className='mt-3 rounded border border-neutral-200 p-3 text-xs text-graphite'>
+            {nextTier ? <>Plus que <b>{nextTier.min - qtyTotal} article{nextTier.min - qtyTotal > 1 ? 's' : ''}</b> pour <b>−{nextTier.pct} %</b> sur votre panier. </> : null}
+            Remise sur la quantité : −5 % dès 2 articles, −10 % dès 3 (non cumulable avec un code promo : la meilleure remise s’applique).
+          </p>
           <Link href='/products' className='mt-3 inline-block text-sm underline'>← Continuer mes achats</Link>
         </div>
 
-        <aside className='self-start rounded border border-ink p-4 md:sticky md:top-32'>
+        <aside className='min-w-0 self-start rounded border border-ink p-4 md:sticky md:top-32'>
           <h2 className='mb-3 font-bold'>Récapitulatif</h2>
           <dl className='space-y-1.5 text-sm'>
             <div className='flex justify-between'><dt>Sous-total</dt><dd>{formatMoney(sub, currency)}</dd></div>
+            {disc.amount > 0 && <div className='flex justify-between font-semibold'><dt>{disc.kind === 'promo' ? 'Code ' + disc.code : 'Remise quantité (−' + disc.pct + ' %)'}</dt><dd>−{formatMoney(disc.amount, currency)}</dd></div>}
             <div className='flex justify-between'><dt>Livraison</dt><dd>{ship === 0 ? 'Offerte' : formatMoney(ship, currency)}</dd></div>
-            <div className='flex justify-between border-t border-neutral-300 pt-2 text-base font-bold'><dt>Total</dt><dd>{formatMoney(sub + ship, currency)}</dd></div>
+            <div className='flex justify-between border-t border-neutral-300 pt-2 text-base font-bold'><dt>Total</dt><dd>{formatMoney(total, currency)}</dd></div>
           </dl>
-          <p className='mt-2 text-xs text-neutral-600'>Livraison estimée : États-Unis 7 à 14 jours · Haïti 14 à 25 jours (provisoire).</p>
+          <PromoBox promo={promo} apply={apply} clear={clear} />
+          <p className='mt-3 text-xs text-neutral-600'>Livraison estimée : États-Unis 7 à 14 jours · Haïti 14 à 25 jours (provisoire).</p>
           <Link href='/checkout' className='mt-4 block rounded bg-ink py-3.5 text-center font-bold text-paper'>Passer la commande</Link>
           <ul className='mt-4 grid grid-cols-2 gap-2'>{TRUST.map(([t, d]) => (<li key={t} className='rounded border border-neutral-200 p-2 text-[11px] leading-snug'><b className='block text-xs'>{t}</b>{d}</li>))}</ul>
         </aside>
@@ -106,7 +121,7 @@ export default function CartPage() {
       )}
 
       <div className='fixed inset-x-0 bottom-14 z-30 flex items-center gap-3 border-t border-ink bg-paper px-4 py-2 md:hidden'>
-        <div className='min-w-0 flex-1'><p className='text-xs text-neutral-600'>Total {ship === 0 ? '· livraison offerte' : ''}</p><b>{formatMoney(sub + ship, currency)}</b></div>
+        <div className='min-w-0 flex-1'><p className='text-xs text-neutral-600'>Total {ship === 0 ? '· livraison offerte' : ''}{disc.amount > 0 ? ' · −' + formatMoney(disc.amount, currency) : ''}</p><b>{formatMoney(total, currency)}</b></div>
         <Link href='/checkout' className='flex h-11 items-center rounded bg-ink px-5 font-bold text-paper'>Commander</Link>
       </div>
     </main>
