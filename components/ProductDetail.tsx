@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { formatMoney, VARIANTS, type Product } from '@/lib/data';
 import { parseDescription } from '@/lib/details';
+import { LOW_STOCK } from '@/lib/stock';
 import { useStore } from './Store';
 import { useProductsByIds } from './useProducts';
 import { BoxIcon } from './Icons';
@@ -30,8 +31,9 @@ function Thumb({ p, className = 'h-1/3 w-1/3' }: { p: Product; className?: strin
 
 // reviews : carrousel d’avis (serveur) ; summary : moyenne et nombre d’avis publiés pour ce produit (sample : avis d’exemple) ;
 // upsell : articles qui complètent ce produit (ex. oreiller -> masque de sommeil), choisis côté serveur ;
-// beforeAfter : photos avant / après déposées dans public/avant-apres (affichées seulement si les deux existent).
-export default function ProductDetail({ p, related, upsell, beforeAfter, reviews, summary }: { p: Product; related: Product[]; upsell?: Product[]; beforeAfter?: { before: string; after: string } | null; reviews?: React.ReactNode; summary?: { avg: number; count: number; sample?: boolean } }) {
+// beforeAfter : photos avant / après déposées dans public/avant-apres (affichées seulement si les deux existent) ;
+// demoStock : le stock affiché est un niveau d’exemple (mode démonstration) — signalé par une mention discrète.
+export default function ProductDetail({ p, related, upsell, beforeAfter, demoStock, reviews, summary }: { p: Product; related: Product[]; upsell?: Product[]; beforeAfter?: { before: string; after: string } | null; demoStock?: boolean; reviews?: React.ReactNode; summary?: { avg: number; count: number; sample?: boolean } }) {
   const router = useRouter();
   const { currency, add, cart } = useStore();
   const real = !!p.image; // produits Zendrop : variantes réelles ; sans image = produit de démonstration (couleurs/tailles fictives)
@@ -63,6 +65,8 @@ export default function ProductDetail({ p, related, upsell, beforeAfter, reviews
   const chosen = vs.find((v) => Object.entries(sel).every(([a, b]) => v.options[a] === b));
   const variant = real ? (chosen?.label || 'Standard') : color + ' / ' + size;
   const out = p.stock === 0;
+  const low = p.stock > 0 && p.stock <= LOW_STOCK; // alerte de stock bas
+  const maxQty = Math.max(1, Math.min(10, p.stock || 10));
 
   // Articles complémentaires en priorité ; à défaut, les produits de la même catégorie.
   const hasUpsell = !!upsell?.length;
@@ -88,18 +92,16 @@ export default function ProductDetail({ p, related, upsell, beforeAfter, reviews
   const buy = () => { add(p.id, qty, variant); };
   const bundleVariant = (b: Product) => (b.image ? 'Standard' : b.id === p.id ? variant : 'Noir / M');
 
-  // overflow-x-clip + grid-cols-[minmax(0,1fr)] + min-w-0 : un élément large (carrousel d’avis, rangée de miniatures) ne doit jamais
-  // élargir la colonne ni la page ; sinon le navigateur mobile dézoome et l’en-tête ne couvre plus que la moitié de l’écran.
   return (
-    <main className='mx-auto max-w-7xl overflow-x-clip px-4 pb-24 pt-4 md:pb-8'>
+    <main className='mx-auto max-w-7xl px-4 pb-24 pt-4 md:pb-8'>
       <div className='mb-3 border border-neutral-200 bg-soft px-3 py-2 text-xs md:text-sm'>
         {cartSub === 0 ? <>Livraison offerte dès <b>{formatMoney(threshold, currency)}</b> d’achats</> : left > 0 ? <>Plus que <b>{formatMoney(left, currency)}</b> pour la livraison offerte</> : <b>Livraison offerte sur votre panier</b>}
         <div className='mt-1.5 h-1.5 w-full bg-neutral-300'><div className='h-full bg-ink transition-all' style={{ width: Math.min(100, (cartSub / threshold) * 100) + '%' }} /></div>
       </div>
       <p className='mb-3 text-xs text-neutral-600'><Link href='/products' className='underline'>Catalogue</Link> / <Link href={'/products?cat=' + encodeURIComponent(p.category)} className='underline'>{p.category}</Link> / {p.name}</p>
 
-      <div className='grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-2 md:gap-10'>
-        <div className='min-w-0'>
+      <div className='grid gap-6 md:grid-cols-2 md:gap-10'>
+        <div>
           <div className='relative grid aspect-square place-items-center overflow-hidden border border-neutral-200 bg-soft text-neutral-400'>
             {imgs.length ? (/* eslint-disable-next-line @next/next/no-img-element */ <img src={imgs[Math.min(img, imgs.length - 1)]} alt={p.name} className='h-full w-full object-contain' />) : <BoxIcon className='h-1/3 w-1/3' />}
             {p.discount > 0 && <span className='absolute left-3 top-3 rounded-sm bg-ink px-2 py-1 text-xs font-bold text-paper'>-{p.discount}%</span>}
@@ -116,7 +118,7 @@ export default function ProductDetail({ p, related, upsell, beforeAfter, reviews
           )}
         </div>
 
-        <div className='min-w-0 md:sticky md:top-32 md:self-start'>
+        <div className='md:sticky md:top-32 md:self-start'>
           <p className='text-xs font-semibold uppercase tracking-widest text-neutral-500'>{p.category}</p>
           <h1 className='mb-2 text-2xl font-extrabold leading-tight md:text-3xl'>{p.name}</h1>
           <p className='text-sm text-graphite'>{summary ? <><span aria-label={summary.avg + ' sur 5'} className='text-gold-deep'>{'★'.repeat(Math.round(summary.avg))}{'☆'.repeat(5 - Math.round(summary.avg))}</span> {summary.avg} · {summary.count} avis{summary.sample ? ' d’exemple' : ''}</> : 'Aucun avis pour le moment'}</p>
@@ -125,7 +127,7 @@ export default function ProductDetail({ p, related, upsell, beforeAfter, reviews
 
           {parsed.points.length > 0 && (
             <ul className='mt-3 space-y-1.5 text-sm'>
-              {parsed.points.slice(0, 3).map((x, i) => (<li key={i} className='flex gap-2'><span aria-hidden className='font-bold'>✓</span><span className='min-w-0'>{x.title.length > 80 ? x.title.slice(0, 77) + '…' : x.title}</span></li>))}
+              {parsed.points.slice(0, 3).map((x, i) => (<li key={i} className='flex gap-2'><span aria-hidden className='font-bold'>✓</span><span>{x.title.length > 80 ? x.title.slice(0, 77) + '…' : x.title}</span></li>))}
             </ul>
           )}
 
@@ -142,13 +144,21 @@ export default function ProductDetail({ p, related, upsell, beforeAfter, reviews
 
           {reviews}
 
-          <p className='mt-3 flex items-center gap-2 text-sm'><span className={'h-2.5 w-2.5 rounded-full ' + (out ? 'bg-neutral-400' : 'bg-ink')} />{out ? 'Rupture de stock' : 'En stock, prêt à expédier'}</p>
+          {low ? (
+            <div className='mt-3 text-sm'>
+              <p className='flex items-center gap-2 font-semibold text-red-700'><span className='h-2.5 w-2.5 rounded-full bg-red-600' />Plus que {p.stock} en stock — commandez vite</p>
+              <div className='mt-1.5 h-1.5 w-full max-w-xs rounded-full bg-neutral-200'><div className='h-full rounded-full bg-red-600' style={{ width: Math.max(8, Math.min(100, (p.stock / LOW_STOCK) * 100)) + '%' }} /></div>
+              {demoStock && <p className='mt-1 text-[11px] text-neutral-500'>Niveau de stock d’exemple — démonstration</p>}
+            </div>
+          ) : (
+            <p className='mt-3 flex items-center gap-2 text-sm'><span className={'h-2.5 w-2.5 rounded-full ' + (out ? 'bg-neutral-400' : 'bg-ink')} />{out ? 'Rupture de stock' : 'En stock, prêt à expédier'}</p>
+          )}
 
           <div className='mt-4 flex flex-wrap items-center gap-3'>
             <span className='inline-flex rounded border border-ink'>
               <button onClick={() => setQty(Math.max(1, qty - 1))} aria-label='Moins' className='h-12 w-11 text-lg'>−</button>
-              <span className='grid w-10 place-items-center'>{qty}</span>
-              <button onClick={() => setQty(Math.min(10, qty + 1))} aria-label='Plus' className='h-12 w-11 text-lg'>+</button>
+              <span className='grid w-10 place-items-center'>{Math.min(qty, maxQty)}</span>
+              <button onClick={() => setQty(Math.min(maxQty, qty + 1))} aria-label='Plus' className='h-12 w-11 text-lg'>+</button>
             </span>
             <button disabled={out} onClick={buy} className='h-12 min-w-40 flex-1 rounded bg-ink font-bold text-paper hover:bg-graphite disabled:bg-neutral-300'>Ajouter au panier · {formatMoney(p.price * qty, currency)}</button>
           </div>
@@ -163,14 +173,14 @@ export default function ProductDetail({ p, related, upsell, beforeAfter, reviews
 
       {beforeAfter && (
         <section className='mt-10 rounded-lg bg-soft p-4 md:p-8'>
-          <div className='grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-2 md:items-center md:gap-10'>
+          <div className='grid gap-6 md:grid-cols-2 md:items-center md:gap-10'>
             <BeforeAfter before={beforeAfter.before} after={beforeAfter.after} alt={p.name} />
-            <div className='min-w-0'>
+            <div>
               <h2 className='text-2xl font-extrabold md:text-3xl'>Avant / Après</h2>
               <p className='mt-1 text-sm text-graphite'>Faites glisser le curseur pour comparer.</p>
               {parsed.points.length > 0 && (
                 <ul className='mt-4 space-y-2'>
-                  {parsed.points.slice(0, 3).map((x, i) => (<li key={i} className='flex gap-2 font-medium'><span aria-hidden className='font-bold'>✓</span><span className='min-w-0'>{x.title.length > 90 ? x.title.slice(0, 87) + '…' : x.title}</span></li>))}
+                  {parsed.points.slice(0, 3).map((x, i) => (<li key={i} className='flex gap-2 font-medium'><span aria-hidden className='font-bold'>✓</span><span>{x.title.length > 90 ? x.title.slice(0, 87) + '…' : x.title}</span></li>))}
                 </ul>
               )}
               <p className='mt-4 text-xs text-neutral-600'>Photos fournies à titre d’illustration. Les résultats varient d’une personne à l’autre.</p>
@@ -201,14 +211,14 @@ export default function ProductDetail({ p, related, upsell, beforeAfter, reviews
         </section>
       )}
 
-      <section className='mt-10 grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-2'>
-        <div className='min-w-0'>
+      <section className='mt-10 grid gap-6 md:grid-cols-2'>
+        <div>
           <h2 className='mb-2 text-xl font-bold'>Pourquoi commander chez AMIRCAL</h2>
           <ul className='space-y-2 text-sm'>
             {['Commandez en USD ou en HTG', 'Suivi de colis disponible dans votre compte', 'Paiement sécurisé par un prestataire externe', 'Livraison vers les États-Unis et Haïti'].map((t) => (<li key={t} className='flex gap-2'><span aria-hidden>✓</span>{t}</li>))}
           </ul>
         </div>
-        <div className='min-w-0 rounded border border-neutral-200 p-4 text-sm leading-relaxed'>
+        <div className='rounded border border-neutral-200 p-4 text-sm leading-relaxed'>
           <b>Description</b>
           {paras.length ? paras.map((t, i) => (<p key={i} className='mt-2'>{t}</p>)) : parsed.points.length ? null : <p className='mt-1'>La description détaillée de ce produit sera ajoutée prochainement.</p>}
           {!paras.length && parsed.points.length > 0 && <p className='mt-1'>Voir les détails du produit ci-dessous.</p>}
@@ -219,8 +229,8 @@ export default function ProductDetail({ p, related, upsell, beforeAfter, reviews
         <section className='mt-10'>
           <h2 className='mb-3 text-xl font-bold'>Détails du produit</h2>
           {detailCards.length > 0 && (
-            <div className='grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2'>
-              {detailCards.map((x, i) => (<div key={i} className='min-w-0 rounded border border-neutral-200 p-3 text-sm'><b className='block'>{x.title}</b><p className='mt-1 text-graphite'>{x.text}</p></div>))}
+            <div className='grid gap-3 sm:grid-cols-2'>
+              {detailCards.map((x, i) => (<div key={i} className='rounded border border-neutral-200 p-3 text-sm'><b className='block'>{x.title}</b><p className='mt-1 text-graphite'>{x.text}</p></div>))}
             </div>
           )}
           {parsed.how && (

@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { sbPublic } from './supabase/public';
 import { MARGIN, type Product } from './data';
+import { stockFor } from './stock';
 
 // sell_price_usd : prix habituel calculé en base (grille par tranche de coût) ; sale_percent : remise proposée, appliquée seulement si la vente est activée (site_settings, clé « sale »).
 const SEL = 'id,supplier_product_id,title,description,base_price_usd,sell_price_usd,sale_percent,categories(name),product_images(url,sort_order)';
@@ -57,9 +58,10 @@ function toProduct(r: Row, saleOn: boolean): Product {
     const sale = Math.ceil(regular * (1 - pct / 100)) - 0.01; // arrondi vers le haut, terminé en .99 : la marge est préservée
     if (sale > 0 && sale < regular) { price = Math.round(sale * 100) / 100; compareAt = regular; discount = Math.round((1 - price / regular) * 100); }
   }
+  const id = Number(r.supplier_product_id);
   return {
-    id: Number(r.supplier_product_id), name: tidy(r.title), category: cat ?? '',
-    price, compareAt, discount, rating: 0, stock: 25, // stock réel : à synchroniser plus tard
+    id, name: tidy(r.title), category: cat ?? '',
+    price, compareAt, discount, rating: 0, stock: stockFor(id, 25), // stock réel : à synchroniser plus tard (voir lib/stock.ts)
     image: imgs[0], images: imgs, description: r.description ?? undefined,
     variants: variants.length ? variants : undefined,
   };
