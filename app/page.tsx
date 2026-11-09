@@ -12,13 +12,16 @@ import { listProducts, trending } from '@/lib/products';
 
 export const revalidate = 300;
 
-// Photos d’ambiance des bannières (déposées dans public/hero/). Les textes des bannières ne changent pas.
-// Une bannière sans photo (ici Maison) garde ses vignettes produits. focus = point de cadrage de la photo.
+// Photos d’ambiance des bannières (déposées dans public/hero/) : elles couvrent toute la bannière, le texte se pose dessus.
+// Les textes des bannières ne changent pas. focus = point de cadrage de la photo (x y).
+// Maison réutilise la photo du salon, cadrée sur le décor (à remplacer par une photo dédiée).
+const PHOTO_HOME = '/hero/file_0000000021b881f5b9f10bc5a7af53e7.png';
 const HERO_PHOTOS: Record<string, { src: string; focus: string }> = {
+  maison: { src: PHOTO_HOME, focus: '15% 50%' },
   beaute: { src: '/hero/file_00000000cb1881f5aeace90b58ec17c0.png', focus: '62% 40%' },
   sports: { src: '/hero/file_0000000070e081f595b1fb4b7bf213d1.png', focus: '50% 40%' },
 };
-const HERO_SHIP = { src: '/hero/file_0000000021b881f5b9f10bc5a7af53e7.png', focus: '68% 40%' }; // bannière générale (livraison)
+const HERO_SHIP = { src: PHOTO_HOME, focus: '68% 40%' }; // bannière générale (livraison)
 
 export default async function Home() {
   const [cats, collections] = await Promise.all([getCategories(), getCollections()]);

@@ -8,11 +8,12 @@ import CatName from './CatName';
 import { BoxIcon } from './Icons';
 
 export type Banner = { desktop: string; mobile?: string; href: string; alt: string };
-// photo : photo d’ambiance (public/hero/) affichée à droite du texte, à la place des vignettes produits ; focus : point de cadrage (ex. « 60% 40% »).
+// photo : photo d’ambiance (public/hero/) affichée en pleine bannière, atténuée par un voile sombre pour que le texte reste lisible ;
+// focus : point de cadrage de la photo (ex. « 60% 40% »).
 export type Slide = { cat?: Cat; images: string[]; banner?: Banner; photo?: string; focus?: string };
 
-// Si des bannières sont déposées dans public/hero/ (hero-1.jpg…), elles s’affichent en pleine largeur.
-// Sinon : bannières avec texte ; chacune montre sa photo d’ambiance, à défaut des visuels de produits du catalogue.
+// Si des bannières pleine largeur sont déposées dans public/hero/ (hero-1.jpg…), elles s’affichent seules.
+// Sinon : bannières avec texte ; avec photo, le texte se pose sur la photo ; sans photo, vignettes produits du catalogue.
 export default function HeroCarousel({ slides }: { slides: Slide[] }) {
   const { lang } = useStore();
   const [i, setI] = useState(0);
@@ -25,7 +26,7 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
   }, [paused, n]);
   if (n === 0) return null;
   const go = (k: number) => setI((k + n) % n);
-  const dark = !!slides[i].banner || i % 2 === 1;
+  const dark = !!slides[i].banner || !!slides[i].photo || i % 2 === 1;
   const keyOf = (s: Slide) => s.banner?.desktop ?? s.cat?.slug ?? 'ship';
   return (
     <section aria-roledescription='carousel' aria-label='Promotions' onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} className='relative overflow-hidden'>
@@ -40,6 +41,18 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
               </picture>
             </Link>
           </div>
+        ) : s.photo ? (
+          // Photo en fond sur toute la bannière, voile sombre dégradé (plus foncé côté texte), texte clair par-dessus.
+          <div key={keyOf(s)} aria-hidden={k !== i} className='relative isolate flex min-h-[270px] w-full flex-none items-center overflow-hidden bg-ink text-paper md:min-h-[400px]'>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={s.photo} alt='' loading={k === 0 ? 'eager' : 'lazy'} className='absolute inset-0 -z-20 h-full w-full object-cover opacity-90' style={{ objectPosition: s.focus ?? 'center' }} />
+            <div aria-hidden className='absolute inset-0 -z-10 bg-gradient-to-r from-black/75 via-black/50 to-black/20 md:from-black/70 md:via-black/40 md:to-black/10' />
+            <div className='relative flex max-w-xl flex-col gap-2.5 px-12 py-10 pb-14 md:gap-3 md:py-12 md:pl-16 md:pr-6'>
+              <h2 className='text-3xl font-extrabold leading-tight tracking-tight drop-shadow md:text-5xl'>{s.cat ? <CatName c={s.cat} /> : tr(lang, 'hero.ship.title')}</h2>
+              <p className='text-sm opacity-95 drop-shadow md:text-base'>{s.cat ? tr(lang, 'hero.desc') : tr(lang, 'hero.ship.desc')}</p>
+              <Link href={s.cat ? '/products?cat=' + s.cat.slug : '/products'} tabIndex={k === i ? 0 : -1} className='self-start rounded border border-paper bg-paper px-5 py-2.5 text-sm font-bold text-ink md:px-6 md:py-3 md:text-base'>{s.cat ? tr(lang, 'hero.cta') : tr(lang, 'hero.ship.cta')}</Link>
+            </div>
+          </div>
         ) : (
           <div key={keyOf(s)} aria-hidden={k !== i} className={'grid min-h-[250px] w-full flex-none grid-cols-[1.15fr_1fr] md:min-h-[360px] md:grid-cols-2 ' + (k % 2 ? 'bg-ink text-paper' : 'bg-soft text-ink')}>
             <div className='flex flex-col justify-center gap-2.5 py-8 pl-12 pr-2 pb-12 md:max-w-xl md:gap-3 md:pl-14 md:pr-6 md:pb-8'>
@@ -47,22 +60,15 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
               <p className='text-sm opacity-80 md:text-base'>{s.cat ? tr(lang, 'hero.desc') : tr(lang, 'hero.ship.desc')}</p>
               <Link href={s.cat ? '/products?cat=' + s.cat.slug : '/products'} tabIndex={k === i ? 0 : -1} className={'self-start rounded border px-5 py-2.5 text-sm font-bold md:px-6 md:py-3 md:text-base ' + (k % 2 ? 'border-paper bg-paper text-ink' : 'border-ink bg-ink text-paper')}>{s.cat ? tr(lang, 'hero.cta') : tr(lang, 'hero.ship.cta')}</Link>
             </div>
-            {s.photo ? (
-              <div className='relative min-h-[250px] min-w-0 md:min-h-[360px]'>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={s.photo} alt='' loading={k === 0 ? 'eager' : 'lazy'} className='absolute inset-0 h-full w-full object-cover' style={{ objectPosition: s.focus ?? 'center' }} />
-              </div>
-            ) : (
-              <div className='flex items-center justify-center gap-2 py-6 pl-1 pr-12 pb-10 md:gap-4 md:px-8'>
-                {s.images.length === 0 && <BoxIcon className='h-24 w-24 opacity-40' />}
-                {s.images.slice(0, 3).map((u, m) => (
-                  <div key={u} className={'aspect-square w-full max-w-[9.5rem] overflow-hidden rounded-lg border-2 border-gold bg-white shadow-lg md:max-w-[12rem] ' + (m === 0 ? '' : m === 1 ? 'hidden min-[420px]:block' : 'hidden md:block')}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={u} alt='' loading={k === 0 ? 'eager' : 'lazy'} className='h-full w-full object-contain' />
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className='flex items-center justify-center gap-2 py-6 pl-1 pr-12 pb-10 md:gap-4 md:px-8'>
+              {s.images.length === 0 && <BoxIcon className='h-24 w-24 opacity-40' />}
+              {s.images.slice(0, 3).map((u, m) => (
+                <div key={u} className={'aspect-square w-full max-w-[9.5rem] overflow-hidden rounded-lg border-2 border-gold bg-white shadow-lg md:max-w-[12rem] ' + (m === 0 ? '' : m === 1 ? 'hidden min-[420px]:block' : 'hidden md:block')}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={u} alt='' loading={k === 0 ? 'eager' : 'lazy'} className='h-full w-full object-contain' />
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>
