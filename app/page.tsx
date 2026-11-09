@@ -14,10 +14,11 @@ export const revalidate = 300;
 
 // Photos d’ambiance des bannières (déposées dans public/hero/) : elles couvrent toute la bannière, le texte se pose dessus.
 // Les textes des bannières ne changent pas. focus = point de cadrage de la photo (x y).
-// Maison réutilise la photo du salon, cadrée sur le décor (à remplacer par une photo dédiée).
+// Maison : photo dédiée (salle à manger lumineuse), cadrée sur les cadres, le pendentif et la plante.
 const PHOTO_HOME = '/hero/file_0000000021b881f5b9f10bc5a7af53e7.png';
+const PHOTO_MAISON = '/hero/collov-home-design-Pf-GjKfYGO4-unsplash.jpg';
 const HERO_PHOTOS: Record<string, { src: string; focus: string }> = {
-  maison: { src: PHOTO_HOME, focus: '15% 50%' },
+  maison: { src: PHOTO_MAISON, focus: '50% 30%' },
   beaute: { src: '/hero/file_00000000cb1881f5aeace90b58ec17c0.png', focus: '62% 40%' },
   sports: { src: '/hero/file_0000000070e081f595b1fb4b7bf213d1.png', focus: '50% 40%' },
 };
