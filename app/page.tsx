@@ -12,6 +12,14 @@ import { listProducts, trending } from '@/lib/products';
 
 export const revalidate = 300;
 
+// Photos d’ambiance des bannières (déposées dans public/hero/). Les textes des bannières ne changent pas.
+// Une bannière sans photo (ici Maison) garde ses vignettes produits. focus = point de cadrage de la photo.
+const HERO_PHOTOS: Record<string, { src: string; focus: string }> = {
+  beaute: { src: '/hero/file_00000000cb1881f5aeace90b58ec17c0.png', focus: '62% 40%' },
+  sports: { src: '/hero/file_0000000070e081f595b1fb4b7bf213d1.png', focus: '50% 40%' },
+};
+const HERO_SHIP = { src: '/hero/file_0000000021b881f5b9f10bc5a7af53e7.png', focus: '68% 40%' }; // bannière générale (livraison)
+
 export default async function Home() {
   const [cats, collections] = await Promise.all([getCategories(), getCollections()]);
   // Rangées de catégories de l’accueil : les 6 premières catégories, avec Sports à la place d’Électronique.
@@ -19,7 +27,7 @@ export default async function Home() {
   const rowCats = cats.slice(0, 6).map((c) => (c.slug === 'electronique' && sports ? sports : c));
   const heroCats: Cat[] = ['maison', 'sports', 'beaute'].flatMap((s) => cats.filter((c) => c.slug === s));
   const heroPick = heroCats.length ? heroCats : cats.slice(0, 3);
-  const custom = heroSlides(); // bannières déposées dans public/hero/
+  const custom = heroSlides(); // bannières pleine largeur déposées dans public/hero/ (hero-1.jpg…)
   const catPhotos = categoryPhotos(); // photos déposées dans public/categories/
   const colPhotos = collectionPhotos(); // photos déposées dans public/collections/
   // Tendances et « À découvrir » : sélection faite à la main (rangs 1 à 12, puis 13 à 22). Chaque rangée de catégorie suit l’ordre de la sélection de la catégorie.
@@ -33,8 +41,8 @@ export default async function Home() {
   const gridItems = discover.length ? discover : (await listProducts({ per: 10, page: 2 })).items;
   const imgs = (items: { image?: string }[]) => items.map((p) => p.image).filter((u): u is string => !!u);
   const slides: Slide[] = custom.length ? custom : [
-    ...heroPick.map((c, i) => ({ cat: c, images: imgs(heroLists[i].items) })),
-    { images: imgs(hotItems).slice(0, 3) },
+    ...heroPick.map((c, i) => ({ cat: c, images: imgs(heroLists[i].items), photo: HERO_PHOTOS[c.slug]?.src, focus: HERO_PHOTOS[c.slug]?.focus })),
+    { images: imgs(hotItems).slice(0, 3), photo: HERO_SHIP.src, focus: HERO_SHIP.focus },
   ];
   return (
     <main>

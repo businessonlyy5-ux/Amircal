@@ -8,10 +8,11 @@ import CatName from './CatName';
 import { BoxIcon } from './Icons';
 
 export type Banner = { desktop: string; mobile?: string; href: string; alt: string };
-export type Slide = { cat?: Cat; images: string[]; banner?: Banner };
+// photo : photo d’ambiance (public/hero/) affichée à droite du texte, à la place des vignettes produits ; focus : point de cadrage (ex. « 60% 40% »).
+export type Slide = { cat?: Cat; images: string[]; banner?: Banner; photo?: string; focus?: string };
 
-// Si des bannières sont déposées dans public/hero/, elles s’affichent en pleine largeur.
-// Sinon : repli sur des visuels de produits du catalogue.
+// Si des bannières sont déposées dans public/hero/ (hero-1.jpg…), elles s’affichent en pleine largeur.
+// Sinon : bannières avec texte ; chacune montre sa photo d’ambiance, à défaut des visuels de produits du catalogue.
 export default function HeroCarousel({ slides }: { slides: Slide[] }) {
   const { lang } = useStore();
   const [i, setI] = useState(0);
@@ -46,15 +47,22 @@ export default function HeroCarousel({ slides }: { slides: Slide[] }) {
               <p className='text-sm opacity-80 md:text-base'>{s.cat ? tr(lang, 'hero.desc') : tr(lang, 'hero.ship.desc')}</p>
               <Link href={s.cat ? '/products?cat=' + s.cat.slug : '/products'} tabIndex={k === i ? 0 : -1} className={'self-start rounded border px-5 py-2.5 text-sm font-bold md:px-6 md:py-3 md:text-base ' + (k % 2 ? 'border-paper bg-paper text-ink' : 'border-ink bg-ink text-paper')}>{s.cat ? tr(lang, 'hero.cta') : tr(lang, 'hero.ship.cta')}</Link>
             </div>
-            <div className='flex items-center justify-center gap-2 py-6 pl-1 pr-12 pb-10 md:gap-4 md:px-8'>
-              {s.images.length === 0 && <BoxIcon className='h-24 w-24 opacity-40' />}
-              {s.images.slice(0, 3).map((u, m) => (
-                <div key={u} className={'aspect-square w-full max-w-[9.5rem] overflow-hidden rounded-lg border-2 border-gold bg-white shadow-lg md:max-w-[12rem] ' + (m === 0 ? '' : m === 1 ? 'hidden min-[420px]:block' : 'hidden md:block')}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={u} alt='' loading={k === 0 ? 'eager' : 'lazy'} className='h-full w-full object-contain' />
-                </div>
-              ))}
-            </div>
+            {s.photo ? (
+              <div className='relative min-h-[250px] min-w-0 md:min-h-[360px]'>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={s.photo} alt='' loading={k === 0 ? 'eager' : 'lazy'} className='absolute inset-0 h-full w-full object-cover' style={{ objectPosition: s.focus ?? 'center' }} />
+              </div>
+            ) : (
+              <div className='flex items-center justify-center gap-2 py-6 pl-1 pr-12 pb-10 md:gap-4 md:px-8'>
+                {s.images.length === 0 && <BoxIcon className='h-24 w-24 opacity-40' />}
+                {s.images.slice(0, 3).map((u, m) => (
+                  <div key={u} className={'aspect-square w-full max-w-[9.5rem] overflow-hidden rounded-lg border-2 border-gold bg-white shadow-lg md:max-w-[12rem] ' + (m === 0 ? '' : m === 1 ? 'hidden min-[420px]:block' : 'hidden md:block')}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={u} alt='' loading={k === 0 ? 'eager' : 'lazy'} className='h-full w-full object-contain' />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
