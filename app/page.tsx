@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import HeroCarousel, { type Slide } from '@/components/HeroCarousel';
+import HeroCarousel, { type HeroCopy, type Slide } from '@/components/HeroCarousel';
 import ProductRow from '@/components/ProductRow';
 import ProductCard from '@/components/ProductCard';
 import CatName from '@/components/CatName';
@@ -13,7 +13,7 @@ import { listProducts, trending } from '@/lib/products';
 export const revalidate = 300;
 
 // Photos d’ambiance des bannières (déposées dans public/hero/) : elles couvrent toute la bannière, le texte se pose dessus.
-// Les textes des bannières ne changent pas. focus = point de cadrage de la photo (x y).
+// focus = point de cadrage de la photo (x y).
 // Maison : photo dédiée (salle à manger lumineuse), cadrée sur les cadres, le pendentif et la plante.
 const PHOTO_HOME = '/hero/file_0000000021b881f5b9f10bc5a7af53e7.png';
 const PHOTO_MAISON = '/hero/collov-home-design-Pf-GjKfYGO4-unsplash.jpg';
@@ -23,6 +23,27 @@ const HERO_PHOTOS: Record<string, { src: string; focus: string }> = {
   sports: { src: '/hero/file_0000000070e081f595b1fb4b7bf213d1.png', focus: '50% 40%' },
 };
 const HERO_SHIP = { src: PHOTO_HOME, focus: '68% 40%' }; // bannière générale (livraison)
+
+// Textes des bannières (FR / EN) : un titre, une description et un bouton propres à chaque univers.
+// Les descriptions ne reprennent que ce que le catalogue propose réellement.
+const HERO_COPY: Record<string, { fr: HeroCopy; en: HeroCopy }> = {
+  maison: {
+    fr: { eyebrow: 'Maison', title: 'Une maison qui vous ressemble', desc: 'Décoration, literie, salle de bain et rangement : des pièces choisies pour apporter chaleur et confort à chaque pièce.', cta: 'Explorer la collection Maison' },
+    en: { eyebrow: 'Home', title: 'A home that feels like you', desc: 'Decor, bedding, bath and storage: pieces chosen to bring warmth and comfort to every room.', cta: 'Explore the Home collection' },
+  },
+  sports: {
+    fr: { eyebrow: 'Sports', title: 'Bougez à votre rythme', desc: 'Fitness, course, vélo et sports d’équipe : l’équipement pour vous entraîner chez vous, en salle ou dehors.', cta: 'Découvrir l’univers Sports' },
+    en: { eyebrow: 'Sports', title: 'Move at your own pace', desc: 'Fitness, running, cycling and team sports: the gear to train at home, in the gym or outdoors.', cta: 'Discover Sports' },
+  },
+  beaute: {
+    fr: { eyebrow: 'Beauté', title: 'Votre routine beauté, simplifiée', desc: 'Maquillage, accessoires et soins pour les cheveux : une sélection pour prendre soin de vous au quotidien.', cta: 'Découvrir la sélection Beauté' },
+    en: { eyebrow: 'Beauty', title: 'Your beauty routine, simplified', desc: 'Makeup, accessories and hair care: a selection to look after yourself every day.', cta: 'Discover the Beauty selection' },
+  },
+  ship: {
+    fr: { eyebrow: 'Livraison', title: 'Livraison offerte, suivi inclus', desc: 'Commandez en USD ou en HTG et suivez votre colis jusqu’à la livraison, aux États-Unis comme en Haïti.', cta: 'Voir tous les produits' },
+    en: { eyebrow: 'Shipping', title: 'Free shipping, tracking included', desc: 'Order in USD or HTG and follow your package all the way to delivery, in the United States and in Haiti.', cta: 'Browse all products' },
+  },
+};
 
 export default async function Home() {
   const [cats, collections] = await Promise.all([getCategories(), getCollections()]);
@@ -45,8 +66,8 @@ export default async function Home() {
   const gridItems = discover.length ? discover : (await listProducts({ per: 10, page: 2 })).items;
   const imgs = (items: { image?: string }[]) => items.map((p) => p.image).filter((u): u is string => !!u);
   const slides: Slide[] = custom.length ? custom : [
-    ...heroPick.map((c, i) => ({ cat: c, images: imgs(heroLists[i].items), photo: HERO_PHOTOS[c.slug]?.src, focus: HERO_PHOTOS[c.slug]?.focus })),
-    { images: imgs(hotItems).slice(0, 3), photo: HERO_SHIP.src, focus: HERO_SHIP.focus },
+    ...heroPick.map((c, i) => ({ cat: c, images: imgs(heroLists[i].items), photo: HERO_PHOTOS[c.slug]?.src, focus: HERO_PHOTOS[c.slug]?.focus, copy: HERO_COPY[c.slug] })),
+    { images: imgs(hotItems).slice(0, 3), photo: HERO_SHIP.src, focus: HERO_SHIP.focus, copy: HERO_COPY.ship },
   ];
   return (
     <main>
