@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { formatMoney, type Product } from '@/lib/data';
-import { LOW_STOCK } from '@/lib/stock';
+import { LOW_STOCK, VERY_LOW_STOCK } from '@/lib/stock';
 import { useStore } from './Store';
 import { BoxIcon, HeartIcon } from './Icons';
 
@@ -24,7 +24,10 @@ export default function ProductCard({ p }: { p: Product }) {
         <Link href={'/products/' + p.id} className='line-clamp-2 min-h-[2.4em] text-[13px] leading-snug'>{p.name}</Link>
         {p.rating > 0 && <div className='text-xs text-graphite'>★ {p.rating}</div>}
         <div className='text-base font-bold'>{formatMoney(p.price, currency)}{p.compareAt > 0 && <s className='ml-1.5 text-xs font-normal text-neutral-500'>{formatMoney(p.compareAt, currency)}</s>}</div>
-        {p.stock === 0 ? <div className='text-xs text-neutral-500'>Rupture de stock</div> : p.stock <= LOW_STOCK ? <div className='text-xs font-semibold text-red-700'>Plus que {p.stock} en stock</div> : <div className='text-xs text-neutral-500'>En stock</div>}
+        {p.stock === 0 ? <div className='text-xs text-neutral-500'>Rupture de stock</div>
+          : p.stock <= VERY_LOW_STOCK ? <div className='text-xs font-semibold text-red-700'>Plus que {p.stock} en stock</div>
+          : p.stock <= LOW_STOCK ? <div className='text-xs font-semibold text-amber-700'>Stock limité · {p.stock} restants</div>
+          : <div className='text-xs text-neutral-500'>En stock</div>}
         <button disabled={!p.stock} onClick={() => add(p.id)} className='mt-auto rounded bg-ink py-2 text-[13px] font-semibold text-paper hover:bg-graphite disabled:cursor-not-allowed disabled:bg-neutral-300'>Ajouter au panier</button>
       </div>
     </article>
