@@ -27,7 +27,7 @@ export default function ProductCard({ p }: { p: Product }) {
         {p.stock === 0 ? <div className='text-xs text-neutral-500'>Rupture de stock</div>
           : p.stock <= VERY_LOW_STOCK ? <div className='text-xs font-semibold text-red-700'>Plus que {p.stock} en stock</div>
           : p.stock <= LOW_STOCK ? <div className='text-xs font-semibold text-amber-700'>Stock limité · {p.stock} restants</div>
-          : <div className='text-xs text-neutral-500'>En stock</div>}
+          : <div className='flex items-center gap-1.5 text-xs font-medium text-green-700'><span aria-hidden className='h-2 w-2 rounded-full bg-green-600' />En stock</div>}
         <button disabled={!p.stock} onClick={() => add(p.id)} className='mt-auto rounded bg-ink py-2 text-[13px] font-semibold text-paper hover:bg-graphite disabled:cursor-not-allowed disabled:bg-neutral-300'>Ajouter au panier</button>
       </div>
     </article>

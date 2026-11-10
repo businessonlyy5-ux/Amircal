@@ -4,12 +4,13 @@ import { MARGIN, type Product } from './data';
 import { stockFor } from './stock';
 
 // sell_price_usd : prix habituel calculé en base (grille par tranche de coût) ; sale_percent : remise proposée, appliquée seulement si la vente est activée (site_settings, clé « sale »).
-const SEL = 'id,supplier_product_id,title,description,base_price_usd,sell_price_usd,sale_percent,categories(name),product_images(url,sort_order)';
+// in_stock : disponibilité chez le fournisseur (synchronisée par scripts/sync-stock.mjs) ; faux = « Rupture de stock ».
+const SEL = 'id,supplier_product_id,title,description,base_price_usd,sell_price_usd,sale_percent,in_stock,categories(name),product_images(url,sort_order)';
 // La fiche produit charge aussi les variantes Zendrop (couleur, taille…) avec leur prix.
 const SEL_DETAIL = SEL + ',product_variants(options,price_usd,is_active)';
 type Row = {
   id: string; supplier_product_id: string | null; title: string; description: string | null; base_price_usd: number | string;
-  sell_price_usd: number | string | null; sale_percent: number | string | null;
+  sell_price_usd: number | string | null; sale_percent: number | string | null; in_stock: boolean | null;
   categories: { name: string } | { name: string }[] | null; product_images: { url: string; sort_order: number }[] | null;
   product_variants?: { options: Record<string, unknown> | null; price_usd: number | string; is_active: boolean }[] | null;
 };
@@ -61,7 +62,8 @@ function toProduct(r: Row, saleOn: boolean): Product {
   const id = Number(r.supplier_product_id);
   return {
     id, name: tidy(r.title), category: cat ?? '',
-    price, compareAt, discount, rating: 0, stock: stockFor(id, 25), // stock réel : à synchroniser plus tard (voir lib/stock.ts)
+    // Disponibilité réelle (en stock / rupture) ; Zendrop ne donne pas de quantité : 25 est une valeur fixe (voir lib/stock.ts).
+    price, compareAt, discount, rating: 0, stock: r.in_stock === false ? 0 : stockFor(id, 25),
     image: imgs[0], images: imgs, description: r.description ?? undefined,
     variants: variants.length ? variants : undefined,
   };
