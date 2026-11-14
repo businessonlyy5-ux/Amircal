@@ -22,7 +22,7 @@ export default function Header({ categories }: { categories: Cat[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const onProductPage = /^\/products\/[^/]+/.test(pathname ?? ''); // barre de catégories masquée sur les fiches produit
-  const { currency, setCurrency, count, wish, lang, setLang } = useStore();
+  const { count, wish, lang, setLang } = useStore();
   const t = (k: string) => tr(lang, k);
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -55,11 +55,10 @@ export default function Header({ categories }: { categories: Cat[] }) {
   }, [menu]);
 
   const go = (e: React.FormEvent) => { e.preventDefault(); setOpen(false); router.push('/products?q=' + encodeURIComponent(q.trim())); };
-  const htg = currency === 'HTG';
   const fr = lang === 'fr';
   const L = fr
-    ? { signin: 'Se connecter ou s’inscrire', menu: 'Menu', close: 'Fermer', cats: 'Catégories', lang: 'Langue', cur: 'Devise' }
-    : { signin: 'Sign in or register', menu: 'Menu', close: 'Close', cats: 'Categories', lang: 'Language', cur: 'Currency' };
+    ? { signin: 'Se connecter ou s’inscrire', menu: 'Menu', close: 'Fermer', cats: 'Catégories', lang: 'Langue' }
+    : { signin: 'Sign in or register', menu: 'Menu', close: 'Close', cats: 'Categories', lang: 'Language' };
 
   // Barre de recherche en pilule (même formulaire sur mobile, sous la ligne du logo, et sur ordinateur, dans la ligne du logo).
   const search = (
@@ -81,11 +80,10 @@ export default function Header({ categories }: { categories: Cat[] }) {
         <div className='mx-auto flex max-w-7xl items-center gap-1 px-3 pb-1 pt-2 md:gap-3 md:px-4 md:py-3'>
           <button onClick={() => setMenu(true)} aria-label={L.menu} aria-expanded={menu} className='flex-none p-2 md:hidden'><MenuIcon /></button>
           <Logo className='h-[22px] invert md:h-6' />
-          <div className='hidden text-xs leading-tight lg:block'>{t('hdr.deliver')}<b className='block text-[13px]'>{htg ? t('hdr.ht') : t('hdr.us')}</b></div>
+          <div className='hidden items-center gap-2 text-xs leading-tight lg:flex'><Flag code='US' className='h-4 w-6' /><span>{t('hdr.deliver')}<b className='block text-[13px]'>{t('hdr.us')}</b></span></div>
           <div className='hidden min-w-0 flex-1 md:flex'>{search}</div>
           <div className='ml-auto flex flex-none items-center md:ml-0 md:gap-1'>
-            <button onClick={() => setLang(fr ? 'en' : 'fr')} aria-label={fr ? 'Switch to English' : 'Passer en français'} className='hidden items-center gap-1.5 whitespace-nowrap px-2 text-sm md:flex'><Flag code={fr ? 'HT' : 'US'} />{fr ? 'FR' : 'EN'}</button>
-            <button onClick={() => setCurrency(htg ? 'USD' : 'HTG')} aria-label={htg ? 'HTG → USD' : 'USD → HTG'} className='hidden whitespace-nowrap px-2 text-sm md:block'>{htg ? 'HTG' : 'USD'}</button>
+            <button onClick={() => setLang(fr ? 'en' : 'fr')} aria-label={fr ? 'Switch to English' : 'Passer en français'} className='hidden items-center gap-1.5 whitespace-nowrap px-2 text-sm md:flex'><Flag code={fr ? 'FR' : 'US'} />{fr ? 'FR' : 'EN'}</button>
             <Link href='/login' aria-label={t('hdr.account')} className='flex items-center gap-2 p-2 text-sm'><UserIcon /><span className='hidden md:inline'>{t('hdr.account')}</span></Link>
             <Link href='/wishlist' aria-label={t('nav.wish')} className='relative hidden p-2 md:block'><HeartIcon className='h-7 w-7' />{wish.length > 0 && <span className='absolute right-0 top-0 min-w-4 rounded-full bg-ink px-1 text-center text-[10px] font-bold text-paper'>{wish.length}</span>}</Link>
             <Link href='/cart' aria-label={t('nav.cart')} className='relative p-2'><BagIcon />{count > 0 && <span className='absolute right-0 top-0 min-w-4 rounded-full bg-ink px-1 text-center text-[10px] font-bold text-paper'>{count}</span>}</Link>
@@ -121,8 +119,7 @@ export default function Header({ categories }: { categories: Cat[] }) {
             </nav>
             <div className='mt-auto space-y-1 border-t border-neutral-200 px-4 py-3 text-sm'>
               <Link href='/wishlist' className='flex items-center justify-between py-2'><span className='flex items-center gap-2'><HeartIcon className='h-5 w-5' />{t('nav.wish')}</span>{wish.length > 0 && <b>{wish.length}</b>}</Link>
-              <button onClick={() => setLang(fr ? 'en' : 'fr')} className='flex w-full items-center justify-between py-2'><span>{L.lang}</span><span className='flex items-center gap-1.5 font-medium'><Flag code={fr ? 'HT' : 'US'} />{fr ? 'Français' : 'English'}</span></button>
-              <button onClick={() => setCurrency(htg ? 'USD' : 'HTG')} className='flex w-full items-center justify-between py-2'><span>{L.cur}</span><span className='font-medium'>{htg ? 'HTG' : 'USD'}</span></button>
+              <button onClick={() => setLang(fr ? 'en' : 'fr')} className='flex w-full items-center justify-between py-2'><span>{L.lang}</span><span className='flex items-center gap-1.5 font-medium'><Flag code={fr ? 'FR' : 'US'} />{fr ? 'Français' : 'English'}</span></button>
             </div>
           </aside>
         </div>

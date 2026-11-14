@@ -28,14 +28,14 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 // Pied de page blanc, texte noir. Le logo est blanc : on l’inverse (invert) pour qu’il apparaisse en noir.
-// La langue et la devise se changent dans l’en-tête (et dans le menu sur mobile), pas dans le pied de page.
+// La langue se change dans l’en-tête (et dans le menu sur mobile). Boutique états-unienne : USD uniquement.
 export default function Footer({ categories }: { categories: Cat[] }) {
   const { lang } = useStore();
   const t = (k: string) => tr(lang, k);
   const en = lang === 'en';
   const L = en
-    ? { shop: 'Shop', all: 'All categories', register: 'Create an account', countries: 'United States · Haiti', pay: 'Secure payments' }
-    : { shop: 'Boutique', all: 'Toutes les catégories', register: 'Créer un compte', countries: 'États-Unis · Haïti', pay: 'Paiements sécurisés' };
+    ? { shop: 'Shop', all: 'All categories', register: 'Create an account', countries: 'United States · Delivery in 3 to 5 days', pay: 'Secure payments' }
+    : { shop: 'Boutique', all: 'Toutes les catégories', register: 'Créer un compte', countries: 'États-Unis · Livraison en 3 à 5 jours', pay: 'Paiements sécurisés' };
 
   return (
     <>

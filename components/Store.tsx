@@ -23,6 +23,7 @@ export function useStore() {
 }
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
+  // Boutique états-unienne : la devise est toujours l’USD (une ancienne valeur HTG enregistrée dans le navigateur est ignorée).
   const [currency, setCurrency] = useState<Currency>('USD');
   const [lang, setLang] = useState<Lang>('fr');
   const [cart, setCart] = useState<CartLine[]>([]);
@@ -33,7 +34,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const s = JSON.parse(localStorage.getItem('amircal') ?? '{}');
-      if (s.currency === 'USD' || s.currency === 'HTG') setCurrency(s.currency);
       if (s.lang === 'fr' || s.lang === 'en') setLang(s.lang);
       if (Array.isArray(s.cart)) setCart(s.cart);
       if (Array.isArray(s.wish)) setWish(s.wish);

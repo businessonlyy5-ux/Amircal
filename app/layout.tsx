@@ -11,8 +11,8 @@ import { getRate } from '@/lib/rate';
 export const revalidate = 300;
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
-  title: { default: 'AMIRCAL — Marketplace', template: '%s | AMIRCAL' },
-  description: 'Marketplace internationale : électronique, maison, mode, beauté et plus. Livraison aux États-Unis et en Haïti.',
+  title: { default: 'AMIRCAL — Online store', template: '%s | AMIRCAL' },
+  description: 'Electronics, home, fashion, beauty and more. Delivery across the United States in 3 to 5 days.',
 };
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
